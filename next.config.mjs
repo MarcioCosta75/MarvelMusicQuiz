@@ -15,6 +15,10 @@ const nextConfig = {
       "utf-8-validate": "utf-8-validate",
     })
     return config
+  },
+  output: 'standalone',
+  experimental: {
+    serverActions: true,
   }
 }
 

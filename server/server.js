@@ -116,7 +116,7 @@ io.on("connection", (socket) => {
         currentRound: room.currentRound,
         totalRounds: room.totalRounds,
         timeLeft: room.timeLeft,
-      })
+    })
       socket.emit("music_preview", { musicPreview: room.musicPreview })
       socket.emit("music_toggled", { isPlaying: room.isPlaying })
       if (room.currentSong) {
@@ -263,7 +263,7 @@ io.on("connection", (socket) => {
     const normalizedCharacter = normalizeString(room.currentSong.character);
     const normalizedMovie = normalizeString(room.currentSong.movie);
 
-    const isCorrect = 
+    const isCorrect =
       normalizedCharacter.includes(normalizedGuess) ||
       normalizedGuess.includes(normalizedCharacter) ||
       normalizedMovie.includes(normalizedGuess);

@@ -62,9 +62,9 @@ export default function PlayerForm({ roomCode, onSubmit }: PlayerFormProps) {
         <CardDescription className="text-center text-lg flex items-center justify-center gap-2">
           Room Code:{" "}
           <div className="flex items-center gap-2">
-            <span className="font-mono font-bold tracking-widest bg-black dark:bg-white text-white dark:text-black px-2 py-1 rounded">
-              {roomCode}
-            </span>
+          <span className="font-mono font-bold tracking-widest bg-black dark:bg-white text-white dark:text-black px-2 py-1 rounded">
+            {roomCode}
+          </span>
             <Button
               variant="outline"
               size="icon"

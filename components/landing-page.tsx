@@ -349,36 +349,36 @@ export default function LandingPage() {
 
       {joinError ? null : (
         <>
-          {gameState === "playerForm" && <PlayerForm roomCode={roomCode} onSubmit={handlePlayerFormSubmit} />}
-          {gameState === "lobby" && (
-            <RoomLobby roomCode={roomCode} players={players} isHost={isHost} onStartGame={handleStartGame} />
-          )}
-          {gameState === "game" && (
-            <GameScreen
-              players={players}
-              currentPlayer={currentPlayer!}
-              isHost={isHost}
-              round={round}
-              totalRounds={totalRounds}
-              onEndRound={handleEndRound}
-              roomCode={roomCode}
+      {gameState === "playerForm" && <PlayerForm roomCode={roomCode} onSubmit={handlePlayerFormSubmit} />}
+      {gameState === "lobby" && (
+        <RoomLobby roomCode={roomCode} players={players} isHost={isHost} onStartGame={handleStartGame} />
+      )}
+      {gameState === "game" && (
+        <GameScreen
+          players={players}
+          currentPlayer={currentPlayer!}
+          isHost={isHost}
+          round={round}
+          totalRounds={totalRounds}
+          onEndRound={handleEndRound}
+          roomCode={roomCode}
               currentSong={currentSong}
               initialIsPlaying={initialIsPlaying}
               initialMusicPreview={initialMusicPreview}
               initialTimeLeft={initialTimeLeft}
-            />
-          )}
-          {gameState === "scoreboard" && (
-            <Scoreboard
-              players={players}
-              scores={scores}
-              round={round}
-              totalRounds={totalRounds}
-              onNextRound={handleNextRound}
-              isHost={isHost}
+        />
+      )}
+      {gameState === "scoreboard" && (
+        <Scoreboard
+          players={players}
+          scores={scores}
+          round={round}
+          totalRounds={totalRounds}
+          onNextRound={handleNextRound}
+          isHost={isHost}
               answer={lastCorrectAnswer}
-            />
-          )}
+        />
+      )}
           {gameState === "final_results" && (
             <div className="flex flex-col items-center gap-4 w-full">
               <h2 className="text-2xl font-comic text-center mb-4">🏆 Final Results</h2>
@@ -410,15 +410,15 @@ export default function LandingPage() {
                     };
 
                     return (
-                      <div
-                        key={player.id}
+                  <div
+                    key={player.id}
                         className={`flex items-center justify-between p-4 rounded-lg border-4 mb-3 transform ${index < 3 ? "scale-105" : ""} ${getBackgroundColor(index)}`}
-                      >
-                        <div className="flex items-center gap-3">
+                  >
+                    <div className="flex items-center gap-3">
                           <div className="relative">
-                            <div
-                              className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-black dark:border-white"
-                              style={{ backgroundColor: player.color }}
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-black dark:border-white"
+                        style={{ backgroundColor: player.color }}
                             />
                             {index < 3 && (
                               <div className={`absolute -top-2 -right-2 ${
@@ -448,13 +448,13 @@ export default function LandingPage() {
                       </div>
                     );
                   })}
-              </div>
+                    </div>
               <div className="flex gap-4 mt-4">
-                <Button
+              <Button
                   onClick={handleReadyForNextGame}
                   disabled={!!(currentPlayer && playAgainReady[currentPlayer.id])}
                   className="bg-green-400 hover:bg-green-500 text-black font-comic text-lg border-2 border-black"
-                >
+              >
                   Play Again
                 </Button>
                 <Button
@@ -470,8 +470,8 @@ export default function LandingPage() {
                   className="mt-4 bg-blue-400 hover:bg-blue-500 text-black font-comic text-lg border-2 border-black"
                 >
                   Start New Game ({Object.values(playAgainReady).filter(Boolean).length} players ready)
-                </Button>
-              )}
+              </Button>
+            )}
             </div>
           )}
         </>

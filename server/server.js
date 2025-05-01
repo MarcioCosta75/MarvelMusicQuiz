@@ -22,10 +22,25 @@ const io = new Server(server, {
       ? ["https://marvel-music-quiz.vercel.app", "https://marvelmusicquiz-production.up.railway.app"]
       : "http://localhost:3000",
     methods: ["GET", "POST"],
-    credentials: true,
-    transports: ['websocket', 'polling']
+    credentials: true
   },
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ['websocket', 'polling'],
+  allowUpgrades: true,
+  upgradeTimeout: 30000,
+  cookie: false
 })
+
+// Log connection events
+io.engine.on("connection_error", (err) => {
+  console.log("Connection error:", err);
+});
+
+io.engine.on("headers", (headers, req) => {
+  console.log("Headers:", headers);
+});
 
 // Store active rooms and their data
 const rooms = new Map()

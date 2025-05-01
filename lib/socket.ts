@@ -1,8 +1,8 @@
 import { io } from "socket.io-client"
 
-// Use the full URL including /socket.io
+// Use a relative API path that will be proxied by Next.js
 const SOCKET_URL = process.env.NODE_ENV === "production" 
-  ? "https://marvelmusicquiz-production.up.railway.app"
+  ? "/api/socket"
   : "http://localhost:3001"
 
 export const socket = io(SOCKET_URL, {
@@ -13,10 +13,8 @@ export const socket = io(SOCKET_URL, {
   reconnectionDelayMax: 5000,
   timeout: 60000,
   transports: ['polling', 'websocket'],
-  withCredentials: true,
-  extraHeaders: {
-    "x-requested-with": "XMLHttpRequest"
-  }
+  path: process.env.NODE_ENV === "production" ? "" : "/socket.io",
+  withCredentials: true
 })
 
 let reconnectAttempts = 0;

@@ -1,6 +1,8 @@
 import { io } from "socket.io-client"
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001"
+const SOCKET_URL = process.env.NODE_ENV === "production" 
+  ? "https://marvelmusicquiz-production.up.railway.app"
+  : "http://localhost:3001"
 
 export const socket = io(SOCKET_URL, {
   autoConnect: true,
@@ -28,6 +30,7 @@ socket.on("connect_error", (error) => {
 });
 
 socket.on("connect", () => {
+  console.log("Socket connected successfully");
   reconnectAttempts = 0;
 });
 

@@ -9,9 +9,11 @@ const shazamRouter = require("./shazam")
 const app = express()
 app.use(cors({
   origin: process.env.NODE_ENV === "production"
-    ? ["https://marvel-music-quiz.vercel.app", "https://marvelmusicquiz-production.up.railway.app"]
+    ? ["https://marvel-music-quiz.vercel.app"]
     : "http://localhost:3000",
-  credentials: true
+  credentials: true,
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }))
 app.use(express.json())
 
@@ -19,11 +21,11 @@ const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === "production"
-      ? ["https://marvel-music-quiz.vercel.app", "https://marvelmusicquiz-production.up.railway.app"]
+      ? ["https://marvel-music-quiz.vercel.app"]
       : "http://localhost:3000",
     methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ["my-custom-header"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   },
   allowEIO3: true,
   pingTimeout: 60000,
@@ -44,7 +46,7 @@ const io = new Server(server, {
         ? "https://marvel-music-quiz.vercel.app"
         : "http://localhost:3000",
       "Access-Control-Allow-Methods": "GET,POST",
-      "Access-Control-Allow-Headers": "my-custom-header",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
       "Access-Control-Allow-Credentials": true,
     });
     res.end();

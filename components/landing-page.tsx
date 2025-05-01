@@ -17,6 +17,7 @@ import { ComicPanel } from "./comic-effects"
 import { SpeechBubble } from "./speech-bubble"
 import { ComicText } from "./comic-effects"
 import type { JoinRoomResponse } from "@/context/socket-context"
+import HostDisconnected from "./host-disconnected"
 
 export default function LandingPage() {
   const { createRoom, joinRoom, addPlayer, startGame, endRound, nextRound, playAgain, socket } = useSocket()
@@ -38,6 +39,7 @@ export default function LandingPage() {
   const [lastCorrectAnswer, setLastCorrectAnswer] = useState<string>("")
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const [playAgainReady, setPlayAgainReady] = useState<Record<string, boolean>>({})
+  const [showDisconnected, setShowDisconnected] = useState(false)
 
   // Set up socket event listeners
   useEffect(() => {
@@ -107,15 +109,18 @@ export default function LandingPage() {
     })
 
     socket.on("host_disconnected", () => {
-      // Handle host disconnection
-      alert("The host has disconnected. Returning to landing page.")
-      setGameState("landing")
-      setRoomCode("")
-      setPlayers([])
-      setCurrentPlayer(null)
-      setScores({})
-      setIsHost(false)
-      setRound(1)
+      setShowDisconnected(true)
+      // Reset game state after a short delay
+      setTimeout(() => {
+        setGameState("landing")
+        setRoomCode("")
+        setPlayers([])
+        setCurrentPlayer(null)
+        setScores({})
+        setIsHost(false)
+        setRound(1)
+        setShowDisconnected(false)
+      }, 5000) // 5 seconds delay before resetting
     })
 
     // Receber lista de prontos do backend
@@ -270,212 +275,218 @@ export default function LandingPage() {
         <ThemeToggle />
       </div>
 
-      {gameState === "landing" && (
-        <ComicPanel className="relative overflow-hidden">
-          {joinError && (
-            <div className="bg-red-200 text-red-800 border border-red-400 rounded p-2 my-2 text-center font-bold">
-              {joinError}
-            </div>
-          )}
-          <div className="absolute -right-10 -top-10 rotate-12 z-10">
-            <ComicText type="pow" size="lg">
-              New!
-            </ComicText>
-          </div>
-          <CardHeader>
-            <CardTitle className="text-3xl text-center font-comic transform -rotate-1">Welcome, Marvel Fan!</CardTitle>
-            <CardDescription className="text-center text-lg font-comic-sans">
-              <SpeechBubble>Test your knowledge of Marvel movie music!</SpeechBubble>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="create" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="create">Create Room</TabsTrigger>
-                <TabsTrigger value="join">Join Room</TabsTrigger>
-              </TabsList>
-              <TabsContent value="create" className="mt-4">
-                <div className="flex flex-col items-center space-y-4">
-                  <p className="text-center">Create a new game room and invite your friends!</p>
-                  <div className="w-full">
-                    <label className="block text-sm font-medium mb-2">Number of Rounds:</label>
-                    <div className="grid grid-cols-5 gap-2">
-                      {[5, 10, 15, 20, 30].map((rounds) => (
-                        <button
-                          key={rounds}
-                          onClick={() => setSelectedRounds(rounds)}
-                          className={`p-2 text-center rounded-lg border-2 font-comic transition-all transform hover:scale-105 ${
-                            selectedRounds === rounds
-                              ? "bg-yellow-400 border-black text-black font-bold scale-105 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
-                              : "bg-white hover:bg-yellow-100 border-black text-black hover:border-yellow-400"
-                          }`}
-                        >
-                          {rounds}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleCreateRoom}
-                    className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-comic text-xl uppercase tracking-wider transform hover:scale-105 transition-transform border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] active:shadow-none"
-                  >
-                    Create Room
-                  </Button>
-                </div>
-              </TabsContent>
-              <TabsContent value="join" className="mt-4">
-                <div className="flex flex-col space-y-4">
-                  <p className="text-center">Enter the 6-digit room code to join a game</p>
-                  <Input
-                    placeholder="Room Code"
-                    value={joinRoomCode}
-                    onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
-                    maxLength={6}
-                    className="text-center text-xl tracking-widest"
-                  />
-                  <Button
-                    onClick={handleJoinRoom}
-                    disabled={joinRoomCode.length !== 6}
-                    className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-comic text-xl uppercase tracking-wider transform hover:scale-105 transition-transform border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] active:shadow-none"
-                  >
-                    Join Room
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm opacity-70">Assemble your team and test your Marvel music knowledge!</p>
-          </CardFooter>
-        </ComicPanel>
-      )}
-
-      {joinError ? null : (
+      {showDisconnected ? (
+        <HostDisconnected />
+      ) : (
         <>
-      {gameState === "playerForm" && <PlayerForm roomCode={roomCode} onSubmit={handlePlayerFormSubmit} />}
-      {gameState === "lobby" && (
-        <RoomLobby roomCode={roomCode} players={players} isHost={isHost} onStartGame={handleStartGame} />
-      )}
-      {gameState === "game" && (
-        <GameScreen
-          players={players}
-          currentPlayer={currentPlayer!}
-          isHost={isHost}
-          round={round}
-          totalRounds={totalRounds}
-          onEndRound={handleEndRound}
-          roomCode={roomCode}
-              currentSong={currentSong}
-              initialIsPlaying={initialIsPlaying}
-              initialMusicPreview={initialMusicPreview}
-              initialTimeLeft={initialTimeLeft}
-        />
-      )}
-      {gameState === "scoreboard" && (
-        <Scoreboard
-          players={players}
-          scores={scores}
-          round={round}
-          totalRounds={totalRounds}
-          onNextRound={handleNextRound}
-          isHost={isHost}
-              answer={lastCorrectAnswer}
-        />
-      )}
-          {gameState === "final_results" && (
-            <div className="flex flex-col items-center gap-4 w-full">
-              <h2 className="text-2xl font-comic text-center mb-4">🏆 Final Results</h2>
-              <div className="w-full max-w-md bg-white rounded-lg p-6 border-4 border-black">
-                {Object.entries(scores)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([playerId, score], index) => {
-                    const player = players.find((p) => p.id === playerId);
-                    if (!player) return null;
-
-                    // Função para pegar o emoji da posição
-                    const getPositionEmoji = (position: number) => {
-                      switch (position) {
-                        case 0: return "👑"; // 1º lugar - coroa dourada
-                        case 1: return "🥈"; // 2º lugar - medalha de prata
-                        case 2: return "🥉"; // 3º lugar - medalha de bronze
-                        default: return null;
-                      }
-                    };
-
-                    // Função para pegar a cor de fundo baseada na posição
-                    const getBackgroundColor = (position: number) => {
-                      switch (position) {
-                        case 0: return "bg-gradient-to-r from-yellow-300 to-yellow-100 dark:from-yellow-600 dark:to-yellow-800 border-yellow-500";
-                        case 1: return "bg-gradient-to-r from-gray-300 to-gray-100 dark:from-gray-600 dark:to-gray-800 border-gray-500";
-                        case 2: return "bg-gradient-to-r from-orange-300 to-orange-100 dark:from-orange-600 dark:to-orange-800 border-orange-500";
-                        default: return "bg-white dark:bg-gray-800 border-black dark:border-white";
-                      }
-                    };
-
-                    return (
-                  <div
-                    key={player.id}
-                        className={`flex items-center justify-between p-4 rounded-lg border-4 mb-3 transform ${index < 3 ? "scale-105" : ""} ${getBackgroundColor(index)}`}
-                  >
-                    <div className="flex items-center gap-3">
-                          <div className="relative">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-black dark:border-white"
-                        style={{ backgroundColor: player.color }}
-                            />
-                            {index < 3 && (
-                              <div className={`absolute -top-2 -right-2 ${
-                                index === 0 ? "bg-yellow-400" :
-                                index === 1 ? "bg-gray-300" :
-                                "bg-orange-400"
-                              } rounded-full w-6 h-6 flex items-center justify-center border-2 border-black`}>
-                                <span className="text-sm">{getPositionEmoji(index)}</span>
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-medium font-comic-sans">{player.name}</div>
-                            {index === 0 && (
-                              <div className="text-xs text-yellow-700 dark:text-yellow-400 font-comic">Champion!</div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="text-2xl font-bold tabular-nums font-comic transform rotate-3">
-                            {score} pts
-                          </span>
-                          {playAgainReady[playerId] && (
-                            <span className="text-green-500 text-2xl">✓</span>
-                          )}
+          {gameState === "landing" && (
+            <ComicPanel className="relative overflow-hidden">
+              {joinError && (
+                <div className="bg-red-200 text-red-800 border border-red-400 rounded p-2 my-2 text-center font-bold">
+                  {joinError}
+                </div>
+              )}
+              <div className="absolute -right-10 -top-10 rotate-12 z-10">
+                <ComicText type="pow" size="lg">
+                  New!
+                </ComicText>
+              </div>
+              <CardHeader>
+                <CardTitle className="text-3xl text-center font-comic transform -rotate-1">Welcome, Marvel Fan!</CardTitle>
+                <CardDescription className="text-center text-lg font-comic-sans">
+                  <SpeechBubble>Test your knowledge of Marvel movie music!</SpeechBubble>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="create" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="create">Create Room</TabsTrigger>
+                    <TabsTrigger value="join">Join Room</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="create" className="mt-4">
+                    <div className="flex flex-col items-center space-y-4">
+                      <p className="text-center">Create a new game room and invite your friends!</p>
+                      <div className="w-full">
+                        <label className="block text-sm font-medium mb-2">Number of Rounds:</label>
+                        <div className="grid grid-cols-5 gap-2">
+                          {[5, 10, 15, 20, 30].map((rounds) => (
+                            <button
+                              key={rounds}
+                              onClick={() => setSelectedRounds(rounds)}
+                              className={`p-2 text-center rounded-lg border-2 font-comic transition-all transform hover:scale-105 ${
+                                selectedRounds === rounds
+                                  ? "bg-yellow-400 border-black text-black font-bold scale-105 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
+                                  : "bg-white hover:bg-yellow-100 border-black text-black hover:border-yellow-400"
+                              }`}
+                            >
+                              {rounds}
+                            </button>
+                          ))}
                         </div>
                       </div>
-                    );
-                  })}
+                      <Button
+                        onClick={handleCreateRoom}
+                        className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-comic text-xl uppercase tracking-wider transform hover:scale-105 transition-transform border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] active:shadow-none"
+                      >
+                        Create Room
+                      </Button>
                     </div>
-              <div className="flex gap-4 mt-4">
-              <Button
-                  onClick={handleReadyForNextGame}
-                  disabled={!!(currentPlayer && playAgainReady[currentPlayer.id])}
-                  className="bg-green-400 hover:bg-green-500 text-black font-comic text-lg border-2 border-black"
-              >
-                  Play Again
-                </Button>
-                <Button
-                  onClick={handleExit}
-                  className="bg-red-400 hover:bg-red-500 text-black font-comic text-lg border-2 border-black"
-                >
-                  Exit Game
-                </Button>
-              </div>
-              {isHost && Object.keys(playAgainReady).length > 0 && (
-                <Button
-                  onClick={handlePlayAgain}
-                  className="mt-4 bg-blue-400 hover:bg-blue-500 text-black font-comic text-lg border-2 border-black"
-                >
-                  Start New Game ({Object.values(playAgainReady).filter(Boolean).length} players ready)
-              </Button>
-            )}
-            </div>
+                  </TabsContent>
+                  <TabsContent value="join" className="mt-4">
+                    <div className="flex flex-col space-y-4">
+                      <p className="text-center">Enter the 6-digit room code to join a game</p>
+                      <Input
+                        placeholder="Room Code"
+                        value={joinRoomCode}
+                        onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
+                        maxLength={6}
+                        className="text-center text-xl tracking-widest"
+                      />
+                      <Button
+                        onClick={handleJoinRoom}
+                        disabled={joinRoomCode.length !== 6}
+                        className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-comic text-xl uppercase tracking-wider transform hover:scale-105 transition-transform border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] active:shadow-none"
+                      >
+                        Join Room
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+              <CardFooter className="flex justify-center">
+                <p className="text-sm opacity-70">Assemble your team and test your Marvel music knowledge!</p>
+              </CardFooter>
+            </ComicPanel>
+          )}
+
+          {!joinError && (
+            <>
+              {gameState === "playerForm" && <PlayerForm roomCode={roomCode} onSubmit={handlePlayerFormSubmit} />}
+              {gameState === "lobby" && (
+                <RoomLobby roomCode={roomCode} players={players} isHost={isHost} onStartGame={handleStartGame} />
+              )}
+              {gameState === "game" && (
+                <GameScreen
+                  players={players}
+                  currentPlayer={currentPlayer!}
+                  isHost={isHost}
+                  round={round}
+                  totalRounds={totalRounds}
+                  onEndRound={handleEndRound}
+                  roomCode={roomCode}
+                  currentSong={currentSong}
+                  initialIsPlaying={initialIsPlaying}
+                  initialMusicPreview={initialMusicPreview}
+                  initialTimeLeft={initialTimeLeft}
+                />
+              )}
+              {gameState === "scoreboard" && (
+                <Scoreboard
+                  players={players}
+                  scores={scores}
+                  round={round}
+                  totalRounds={totalRounds}
+                  onNextRound={handleNextRound}
+                  isHost={isHost}
+                  answer={lastCorrectAnswer}
+                />
+              )}
+              {gameState === "final_results" && (
+                <div className="flex flex-col items-center gap-4 w-full">
+                  <h2 className="text-2xl font-comic text-center mb-4">🏆 Final Results</h2>
+                  <div className="w-full max-w-md bg-white rounded-lg p-6 border-4 border-black">
+                    {Object.entries(scores)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([playerId, score], index) => {
+                        const player = players.find((p) => p.id === playerId);
+                        if (!player) return null;
+
+                        // Função para pegar o emoji da posição
+                        const getPositionEmoji = (position: number) => {
+                          switch (position) {
+                            case 0: return "👑"; // 1º lugar - coroa dourada
+                            case 1: return "🥈"; // 2º lugar - medalha de prata
+                            case 2: return "🥉"; // 3º lugar - medalha de bronze
+                            default: return null;
+                          }
+                        };
+
+                        // Função para pegar a cor de fundo baseada na posição
+                        const getBackgroundColor = (position: number) => {
+                          switch (position) {
+                            case 0: return "bg-gradient-to-r from-yellow-300 to-yellow-100 dark:from-yellow-600 dark:to-yellow-800 border-yellow-500";
+                            case 1: return "bg-gradient-to-r from-gray-300 to-gray-100 dark:from-gray-600 dark:to-gray-800 border-gray-500";
+                            case 2: return "bg-gradient-to-r from-orange-300 to-orange-100 dark:from-orange-600 dark:to-orange-800 border-orange-500";
+                            default: return "bg-white dark:bg-gray-800 border-black dark:border-white";
+                          }
+                        };
+
+                        return (
+                          <div
+                            key={player.id}
+                            className={`flex items-center justify-between p-4 rounded-lg border-4 mb-3 transform ${index < 3 ? "scale-105" : ""} ${getBackgroundColor(index)}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="relative">
+                                <div
+                                  className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-black dark:border-white"
+                                  style={{ backgroundColor: player.color }}
+                                />
+                                {index < 3 && (
+                                  <div className={`absolute -top-2 -right-2 ${
+                                    index === 0 ? "bg-yellow-400" :
+                                    index === 1 ? "bg-gray-300" :
+                                    "bg-orange-400"
+                                  } rounded-full w-6 h-6 flex items-center justify-center border-2 border-black`}>
+                                    <span className="text-sm">{getPositionEmoji(index)}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-medium font-comic-sans">{player.name}</div>
+                                {index === 0 && (
+                                  <div className="text-xs text-yellow-700 dark:text-yellow-400 font-comic">Champion!</div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className="text-2xl font-bold tabular-nums font-comic transform rotate-3">
+                                {score} pts
+                              </span>
+                              {playAgainReady[playerId] && (
+                                <span className="text-green-500 text-2xl">✓</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                  <div className="flex gap-4 mt-4">
+                    <Button
+                      onClick={handleReadyForNextGame}
+                      disabled={!!(currentPlayer && playAgainReady[currentPlayer.id])}
+                      className="bg-green-400 hover:bg-green-500 text-black font-comic text-lg border-2 border-black"
+                    >
+                      Play Again
+                    </Button>
+                    <Button
+                      onClick={handleExit}
+                      className="bg-red-400 hover:bg-red-500 text-black font-comic text-lg border-2 border-black"
+                    >
+                      Exit Game
+                    </Button>
+                  </div>
+                  {isHost && Object.keys(playAgainReady).length > 0 && (
+                    <Button
+                      onClick={handlePlayAgain}
+                      className="mt-4 bg-blue-400 hover:bg-blue-500 text-black font-comic text-lg border-2 border-black"
+                    >
+                      Start New Game ({Object.values(playAgainReady).filter(Boolean).length} players ready)
+                    </Button>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </>
       )}

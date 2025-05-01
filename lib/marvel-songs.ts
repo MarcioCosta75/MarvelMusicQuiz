@@ -2,7 +2,7 @@ import type { MarvelSong } from "./types";
 
 export const marvelSongs: MarvelSong[] = [
   // Iron Man (3)
-  { id: "1", title: "Back In Black", artist: "AC/DC", character: "Iron Man", movie: "Iron Man (2008)", difficulty: 1, audioUrl: "/placeholder.svg" },
+  { id: "1", title: "Back In Black", character: "Iron Man", movie: "Iron Man (2008)", audioUrl: "/placeholder.svg" },
   { id: "2", title: "Highway to Hell", character: "Iron Man", movie: "Iron Man 2 (2010)", audioUrl: "/placeholder.svg" },
   { id: "3", title: "War Pigs", character: "Iron Man", movie: "Iron Man (2008)", audioUrl: "/placeholder.svg" },
 

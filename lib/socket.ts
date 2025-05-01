@@ -12,7 +12,7 @@ export const socket = io(SOCKET_URL, {
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
   timeout: 60000,
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'],
   withCredentials: true,
   extraHeaders: {
     "x-requested-with": "XMLHttpRequest"

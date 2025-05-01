@@ -23,10 +23,11 @@ const io = new Server(server, {
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"]
   },
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'],
   allowEIO3: true,
   pingTimeout: 60000,
   pingInterval: 25000,
+  maxHttpBufferSize: 1e8,
   cookie: {
     name: "io",
     path: "/",

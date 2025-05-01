@@ -25,7 +25,7 @@ const io = new Server(server, {
   },
   transports: ['websocket'],
   allowUpgrades: true,
-  upgradeTimeout: 30000,
+  upgradeTimeout: 60000,
   pingTimeout: 60000,
   pingInterval: 25000,
   cookie: {

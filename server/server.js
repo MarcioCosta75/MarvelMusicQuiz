@@ -13,8 +13,13 @@ app.use(express.json())
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === "production" ? "https://your-production-domain.com" : "http://localhost:3000",
+    origin: process.env.NODE_ENV === "production"
+      ? process.env.VERCEL_URL 
+        ? [`https://${process.env.VERCEL_URL}`, `https://*.${process.env.VERCEL_URL}`]
+        : []
+      : "http://localhost:3000",
     methods: ["GET", "POST"],
+    credentials: true
   },
 })
 
@@ -502,10 +507,24 @@ io.on("connection", (socket) => {
 
     // Find rooms where this socket is a player or host
     for (const [roomCode, room] of rooms.entries()) {
-      // If host disconnects, remove the room
+      // If host disconnects, remove the room and notify all players
       if (room.host === socket.id) {
         io.to(roomCode).emit("host_disconnected")
+        
+        // Clear any active timers for the room
+        if (roomTimers.has(roomCode)) {
+          clearInterval(roomTimers.get(roomCode))
+          roomTimers.delete(roomCode)
+        }
+        
+        // Remove the room and any associated data
         rooms.delete(roomCode)
+        if (readyPlayers.has(roomCode)) {
+          readyPlayers.delete(roomCode)
+        }
+        if (playAgainReady.has(roomCode)) {
+          playAgainReady.delete(roomCode)
+        }
         continue
       }
 

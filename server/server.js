@@ -23,7 +23,7 @@ const io = new Server(server, {
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"]
   },
-  transports: ['websocket', 'polling'],
+  transports: ['websocket'],
   allowUpgrades: true,
   upgradeTimeout: 30000,
   pingTimeout: 60000,

@@ -14,9 +14,7 @@ const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === "production"
-      ? process.env.VERCEL_URL 
-        ? [`https://${process.env.VERCEL_URL}`, `https://*.${process.env.VERCEL_URL}`]
-        : []
+      ? "https://marvel-music-quiz.vercel.app"
       : "http://localhost:3000",
     methods: ["GET", "POST"],
     credentials: true

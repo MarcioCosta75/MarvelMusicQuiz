@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const config = {
+  // Capturar todas as requisições para /api/socket
   matcher: '/api/socket/:path*',
 };
 
@@ -15,6 +16,12 @@ export default async function middleware(req) {
     `/socket.io${path}${url.search}`,
     'https://marvelmusicquiz-production.up.railway.app'
   );
+  
+  console.log('Socket.IO Proxy:', {
+    originalUrl: url.toString(),
+    targetUrl: targetUrl.toString(),
+    path: path
+  });
   
   try {
     // Use rewrite to forward the request to the Railway server

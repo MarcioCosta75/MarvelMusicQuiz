@@ -2,7 +2,7 @@ import { io } from "socket.io-client"
 
 // Use a relative API path that will be proxied by Next.js
 const SOCKET_URL = process.env.NODE_ENV === "production" 
-  ? "/api/socket"
+  ? "" // URL vazia para usar a base atual
   : "http://localhost:3001"
 
 export const socket = io(SOCKET_URL, {
@@ -13,7 +13,7 @@ export const socket = io(SOCKET_URL, {
   reconnectionDelayMax: 5000,
   timeout: 60000,
   transports: ['polling', 'websocket'],
-  path: process.env.NODE_ENV === "production" ? "" : "/socket.io",
+  path: process.env.NODE_ENV === "production" ? "/api/socket" : "/socket.io",
   withCredentials: true
 })
 

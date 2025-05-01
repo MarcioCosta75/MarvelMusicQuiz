@@ -1,19 +1,42 @@
 import { io } from "socket.io-client"
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001"
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001"
 
-export const socket = io(BACKEND_URL, {
-  transports: ['polling', 'websocket'], // Start with polling, then upgrade to websocket
+export const socket = io(SOCKET_URL, {
+  autoConnect: true,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000,
+  transports: ['polling', 'websocket'],
   withCredentials: true,
   forceNew: true,
-  timeout: 20000,
-  // Retry connection
-  reconnection: true,
-  reconnectionAttempts: 10,
-  reconnectionDelay: 2000,
-  reconnectionDelayMax: 10000,
-  // Additional options
-  autoConnect: true,
-  path: '/socket.io/',
-  rejectUnauthorized: false, // Important for SSL/TLS issues
-}) 
+  path: '/socket.io',
+})
+
+let reconnectAttempts = 0;
+
+socket.on("connect_error", (error) => {
+  console.error("Socket connection error:", error);
+  // Implement exponential backoff
+  reconnectAttempts++;
+  const retryDelay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+  setTimeout(() => {
+    socket.connect();
+  }, retryDelay);
+});
+
+socket.on("connect", () => {
+  reconnectAttempts = 0;
+});
+
+socket.on("disconnect", (reason) => {
+  console.log("Socket disconnected:", reason)
+  if (reason === "io server disconnect") {
+    // Disconnected by the server, reconnect manually
+    socket.connect()
+  }
+})
+
+export default socket 

@@ -22,15 +22,33 @@ const io = new Server(server, {
       ? ["https://marvel-music-quiz.vercel.app", "https://marvelmusicquiz-production.up.railway.app"]
       : "http://localhost:3000",
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ["my-custom-header"],
   },
   allowEIO3: true,
   pingTimeout: 60000,
   pingInterval: 25000,
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'],
   allowUpgrades: true,
   upgradeTimeout: 30000,
-  cookie: false
+  cookie: {
+    name: "io",
+    path: "/",
+    httpOnly: true,
+    sameSite: "none",
+    secure: true
+  },
+  handlePreflightRequest: (req, res) => {
+    res.writeHead(200, {
+      "Access-Control-Allow-Origin": process.env.NODE_ENV === "production"
+        ? "https://marvel-music-quiz.vercel.app"
+        : "http://localhost:3000",
+      "Access-Control-Allow-Methods": "GET,POST",
+      "Access-Control-Allow-Headers": "my-custom-header",
+      "Access-Control-Allow-Credentials": true,
+    });
+    res.end();
+  }
 })
 
 // Log connection events

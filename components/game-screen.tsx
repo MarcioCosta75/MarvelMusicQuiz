@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +14,7 @@ import { useSocket } from "@/context/socket-context"
 import { ComicPanel } from "./comic-effects"
 import { SpeechBubble } from "./speech-bubble"
 import { ComicText } from "./comic-effects"
+import { Socket } from "socket.io-client"
 
 interface GameScreenProps {
   players: Player[]
@@ -27,6 +28,108 @@ interface GameScreenProps {
   initialIsPlaying?: boolean
   initialMusicPreview?: string | null
   initialTimeLeft?: number
+}
+
+// Custom hook for managing audio playback
+function useAudioPlayer(musicPreview: string | null, isPlaying: boolean, isHost: boolean, socket: Socket | null, roomCode: string, currentSong: MarvelSong | null) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  // Cleanup function to properly dispose of audio instance
+  const cleanup = useCallback(() => {
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+      audioRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    // Cleanup previous audio instance
+    cleanup();
+
+    const setupAudio = async () => {
+      if (!musicPreview || !isPlaying) return;
+
+      try {
+        // Create new audio instance
+        const audio = new window.Audio();
+        audioRef.current = audio;
+
+        // Set up event listeners
+        const onCanPlayThrough = async () => {
+          try {
+            if (isPlaying && audioRef.current === audio) {
+              await audio.play();
+            }
+          } catch (playError) {
+            console.warn("Error playing audio after load:", playError);
+          }
+        };
+
+        const onError = (e: Event) => {
+          console.error("Audio error:", e);
+          if (isHost && socket && audioRef.current === audio) {
+            // If host, try another song
+            const availableSongs = marvelSongs.filter(s => s.id !== currentSong?.id);
+            const nextSong = availableSongs[Math.floor(Math.random() * availableSongs.length)];
+            socket.emit("current_song", { roomCode, currentSong: nextSong });
+          }
+        };
+
+        // Add event listeners
+        audio.addEventListener('canplaythrough', onCanPlayThrough);
+        audio.addEventListener('error', onError);
+
+        // Store cleanup function
+        cleanupRef.current = () => {
+          audio.removeEventListener('canplaythrough', onCanPlayThrough);
+          audio.removeEventListener('error', onError);
+          audio.pause();
+          audio.src = '';
+        };
+
+        // Set source and load
+        audio.src = musicPreview;
+        audio.load();
+
+      } catch (e) {
+        console.error("Error setting up audio:", e);
+        cleanup();
+      }
+    };
+
+    setupAudio();
+
+    // Cleanup on unmount or when dependencies change
+    return cleanup;
+  }, [musicPreview, isHost, socket, roomCode, currentSong, cleanup]);
+
+  // Handle play/pause state changes
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handlePlayPause = async () => {
+      try {
+        if (isPlaying) {
+          await audio.play();
+        } else {
+          audio.pause();
+        }
+      } catch (e) {
+        console.warn("Error handling play/pause:", e);
+      }
+    };
+
+    handlePlayPause();
+  }, [isPlaying]);
+
+  return audioRef;
 }
 
 export default function GameScreen({
@@ -52,9 +155,13 @@ export default function GameScreen({
   const [musicInfo, setMusicInfo] = useState<{ uri: string, title: string, artist: string, coverart: string } | null>(null)
   const [loadingMusic, setLoadingMusic] = useState(false)
   const [showCorrectAnswer, setShowCorrectAnswer] = useState<string | null>(null)
+  const [showAnswer, setShowAnswer] = useState(false)
+  const [lastCorrectAnswer, setLastCorrectAnswer] = useState<string | null>(null)
 
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   const { socket, toggleMusic, submitGuess } = useSocket()
+
+  // Use the custom audio hook
+  const audioRef = useAudioPlayer(musicPreview, isPlaying, isHost, socket, roomCode, currentSong)
 
   // Initialize audio
   useEffect(() => {
@@ -77,7 +184,7 @@ export default function GameScreen({
     }
   }, [isHost, currentSong?.audioUrl, roomCode, toggleMusic])
 
-  // Buscar nome da faixa e artista na OpenAI, depois pesquisar no Shazam
+  // Buscar preview no Shazam usando o título da música
   useEffect(() => {
     if (!isHost) return;
     if (!currentSong) return;
@@ -89,16 +196,8 @@ export default function GameScreen({
       setMusicPreview(null)
       setMusicInfo(null)
       try {
-        // 1. Buscar nome da faixa e artista na OpenAI
-        const openaiRes = await fetch("http://localhost:3001/openai/track", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ movie: songToTry.movie, character: songToTry.character })
-        })
-        const openaiData = await openaiRes.json()
-        if (!openaiData.track) throw new Error("No track from OpenAI")
-        // 2. Pesquisar no Shazam usando track + artist
-        const q = `${openaiData.track} ${openaiData.artist}`
+        // Pesquisar no Shazam usando o título da música
+        const q = songToTry.title
         const shazamRes = await fetch("http://localhost:3001/shazam/preview?q=" + encodeURIComponent(q))
         if (shazamRes.ok) {
           const data = await shazamRes.json()
@@ -201,45 +300,6 @@ export default function GameScreen({
       socket.off("all_failed")
     }
   }, [socket, isHost, onEndRound])
-
-  // Tocar preview automaticamente para todos
-  useEffect(() => {
-    if (musicPreview && isPlaying) {
-      try {
-        const audio = new window.Audio(musicPreview)
-        
-        // Adicionar handlers de erro
-        audio.onerror = (e) => {
-          console.error("Error loading audio:", e)
-          setMusicPreview(null)
-          if (isHost) {
-            // Se host, tentar outra música
-            const availableSongs = marvelSongs.filter(s => s.id !== currentSong?.id)
-            const nextSong = availableSongs[Math.floor(Math.random() * availableSongs.length)]
-            if (socket) {
-              socket.emit("current_song", { roomCode, currentSong: nextSong })
-            }
-          }
-        }
-
-        // Tentar carregar o áudio
-        audio.load()
-        audio.play().catch((e) => {
-          console.error("Error playing audio:", e)
-          setMusicPreview(null)
-        })
-        
-        audioRef.current = audio
-        return () => {
-          audio.pause()
-          audioRef.current = null
-        }
-      } catch (e) {
-        console.error("Error creating audio:", e)
-        setMusicPreview(null)
-      }
-    }
-  }, [musicPreview, isPlaying, isHost, socket, roomCode, currentSong])
 
   // Receber info da música de todos
   useEffect(() => {

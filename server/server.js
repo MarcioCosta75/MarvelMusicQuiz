@@ -1,9 +1,9 @@
+require("dotenv").config()
 const express = require("express")
 const http = require("http")
 const { Server } = require("socket.io")
 const cors = require("cors")
 const { generateRoomCode } = require("./utils")
-const openaiRouter = require("./openai")
 const shazamRouter = require("./shazam")
 
 const app = express()
@@ -249,8 +249,11 @@ io.on("connection", (socket) => {
       return str
         .toLowerCase()
         // Remover acentos
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        // Remover caracteres especiais e pontuação
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        // Substituir hífens e underscores por espaços
+        .replace(/[-_]/g, " ")
+        // Remover caracteres especiais e pontuação, mas manter espaços
         .replace(/[^a-z0-9\s]/g, "")
         // Substituir múltiplos espaços por um único
         .replace(/\s+/g, " ")
@@ -258,15 +261,31 @@ io.on("connection", (socket) => {
         .trim();
     }
 
-    // Check if correct
-    const normalizedGuess = normalizeString(guess);
-    const normalizedCharacter = normalizeString(room.currentSong.character);
-    const normalizedMovie = normalizeString(room.currentSong.movie);
+    // Função para verificar se uma string contém outra, independente da ordem das palavras
+    function fuzzyMatch(guess, target) {
+      const normalizedGuess = normalizeString(guess);
+      const normalizedTarget = normalizeString(target);
 
+      // Se for uma correspondência exata após normalização
+      if (normalizedGuess === normalizedTarget) return true;
+
+      // Dividir em palavras
+      const guessWords = normalizedGuess.split(" ");
+      const targetWords = normalizedTarget.split(" ");
+
+      // Verificar se todas as palavras do guess estão no target
+      return guessWords.every(word => 
+        // A palavra deve ter pelo menos 3 caracteres para ser considerada
+        word.length < 3 || targetWords.some(targetWord => 
+          targetWord.includes(word) || word.includes(targetWord)
+        )
+      );
+    }
+
+    // Check if correct using fuzzy matching
     const isCorrect =
-      normalizedCharacter.includes(normalizedGuess) ||
-      normalizedGuess.includes(normalizedCharacter) ||
-      normalizedMovie.includes(normalizedGuess);
+      fuzzyMatch(guess, room.currentSong.character) ||
+      fuzzyMatch(guess, room.currentSong.movie);
 
     room.correctGuesses[playerId] = isCorrect
 
@@ -541,66 +560,75 @@ io.on("connection", (socket) => {
   });
 })
 
+// Calculate scores based on correct guesses and player order
+function calculateRoundScores(players, correctGuesses, playerGuesses) {
+  const newScores = {};
+  let rank = 1;
+
+  // Sort players by who answered correctly first
+  const correctPlayers = players
+    .filter((p) => correctGuesses[p.id])
+    .sort((a, b) => {
+      const aTime = playerGuesses[a.id]
+        ? players.findIndex((p) => p.id === a.id)
+        : Number.POSITIVE_INFINITY;
+      const bTime = playerGuesses[b.id]
+        ? players.findIndex((p) => p.id === b.id)
+        : Number.POSITIVE_INFINITY;
+      return aTime - bTime;
+    });
+
+  // Assign points based on rank
+  correctPlayers.forEach((player) => {
+    newScores[player.id] = Math.max(10 - (rank - 1) * 2, 1);
+    rank++;
+  });
+
+  return newScores;
+}
+
 // Timer function for countdown
 function startTimer(roomCode) {
-  if (!rooms.has(roomCode)) return
+  if (!rooms.has(roomCode)) return;
 
-  const room = rooms.get(roomCode)
+  const room = rooms.get(roomCode);
 
   const timerInterval = setInterval(() => {
     if (!rooms.has(roomCode)) {
-      clearInterval(timerInterval)
-      return
+      clearInterval(timerInterval);
+      return;
     }
 
-    const currentRoom = rooms.get(roomCode)
+    const currentRoom = rooms.get(roomCode);
 
     if (!currentRoom.isPlaying || currentRoom.gameState !== "game") {
-      clearInterval(timerInterval)
-      return
+      clearInterval(timerInterval);
+      return;
     }
 
-    currentRoom.timeLeft--
+    currentRoom.timeLeft--;
 
     if (currentRoom.timeLeft <= 0) {
-      currentRoom.timeLeft = 0
-      currentRoom.isPlaying = false
-      clearInterval(timerInterval)
+      currentRoom.timeLeft = 0;
+      currentRoom.isPlaying = false;
+      clearInterval(timerInterval);
 
-      // Calculate scores automatically when time runs out
-      const newScores = {}
-      let rank = 1
-
-      // Sort players by who answered correctly first
-      const correctPlayers = currentRoom.players
-        .filter((p) => currentRoom.correctGuesses[p.id])
-        .sort((a, b) => {
-          const aTime = currentRoom.playerGuesses[a.id]
-            ? currentRoom.players.findIndex((p) => p.id === a.id)
-            : Number.POSITIVE_INFINITY
-          const bTime = currentRoom.playerGuesses[b.id]
-            ? currentRoom.players.findIndex((p) => p.id === b.id)
-            : Number.POSITIVE_INFINITY
-          return aTime - bTime
-        })
-
-      // Assign points based on rank
-      correctPlayers.forEach((player) => {
-        newScores[player.id] = Math.max(10 - (rank - 1) * 2, 1)
-        rank++
-      })
-
-      currentRoom.roundScores = newScores
+      // Calculate scores using the extracted function
+      currentRoom.roundScores = calculateRoundScores(
+        currentRoom.players,
+        currentRoom.correctGuesses,
+        currentRoom.playerGuesses
+      );
     }
 
-    rooms.set(roomCode, currentRoom)
+    rooms.set(roomCode, currentRoom);
 
     io.to(roomCode).emit("timer_updated", {
       timeLeft: currentRoom.timeLeft,
       isPlaying: currentRoom.isPlaying,
       roundScores: currentRoom.timeLeft === 0 ? currentRoom.roundScores : {},
-    })
-  }, 1000)
+    });
+  }, 1000);
 
   return timerInterval;
 }
@@ -615,7 +643,6 @@ function startTimer(roomCode) {
 //   return result;
 // }
 
-app.use("/openai", openaiRouter)
 app.use("/shazam", shazamRouter)
 
 const PORT = process.env.PORT || 3001

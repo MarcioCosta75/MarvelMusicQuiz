@@ -259,7 +259,10 @@ export default function LandingPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl comic-bg-light dark:comic-bg-dark min-h-screen">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl md:text-6xl font-comic transform -rotate-2 text-red-600 dark:text-red-500 drop-shadow-[4px_4px_0px_rgba(0,0,0,0.3)] dark:drop-shadow-[4px_4px_0px_rgba(255,255,255,0.2)]">
+        <h1 
+          onClick={() => window.location.reload()}
+          className="text-4xl md:text-6xl font-comic transform -rotate-2 text-red-600 dark:text-red-500 drop-shadow-[4px_4px_0px_rgba(0,0,0,0.3)] dark:drop-shadow-[4px_4px_0px_rgba(255,255,255,0.2)] cursor-pointer hover:scale-105 transition-transform"
+        >
           <span className="inline-block transform rotate-3 text-blue-600 dark:text-blue-500">Marvel</span>{" "}
           <span className="inline-block transform -rotate-1 text-yellow-500">Music</span>{" "}
           <span className="inline-block transform rotate-2 text-red-600 dark:text-red-500">Quiz!</span>

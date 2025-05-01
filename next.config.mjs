@@ -9,17 +9,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  webpack: (config) => {
-    config.externals.push({
-      "bufferutil": "bufferutil",
-      "utf-8-validate": "utf-8-validate",
-    })
-    return config
-  },
-  output: 'standalone',
-  experimental: {
-    serverActions: {}
-  }
 }
 
 export default nextConfig

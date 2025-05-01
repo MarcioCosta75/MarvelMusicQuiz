@@ -23,27 +23,17 @@ const io = new Server(server, {
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"]
   },
-  allowEIO3: true,
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  transports: ['polling', 'websocket'],
+  transports: ['websocket', 'polling'],
   allowUpgrades: true,
   upgradeTimeout: 30000,
+  pingTimeout: 60000,
+  pingInterval: 25000,
   cookie: {
     name: "io",
     path: "/",
     httpOnly: true,
     sameSite: "none",
     secure: true
-  },
-  handlePreflightRequest: (req, res) => {
-    res.writeHead(200, {
-      "Access-Control-Allow-Origin": req.headers.origin || "*",
-      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization, x-requested-with",
-      "Access-Control-Allow-Credentials": true,
-    });
-    res.end();
   }
 })
 

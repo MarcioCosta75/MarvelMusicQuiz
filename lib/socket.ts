@@ -2,8 +2,8 @@ import { io } from "socket.io-client"
 
 // Use the full URL including /socket.io
 const SOCKET_URL = process.env.NODE_ENV === "production" 
-  ? "wss://marvelmusicquiz-production.up.railway.app"
-  : "ws://localhost:3001"
+  ? "https://marvelmusicquiz-production.up.railway.app"
+  : "http://localhost:3001"
 
 export const socket = io(SOCKET_URL, {
   autoConnect: true,
@@ -12,9 +12,8 @@ export const socket = io(SOCKET_URL, {
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
   timeout: 60000,
-  transports: ['websocket'],
+  transports: ['websocket', 'polling'],
   withCredentials: true,
-  path: '/socket.io',
   extraHeaders: {
     "x-requested-with": "XMLHttpRequest"
   }

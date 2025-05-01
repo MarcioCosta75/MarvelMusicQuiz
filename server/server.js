@@ -7,17 +7,23 @@ const { generateRoomCode } = require("./utils")
 const shazamRouter = require("./shazam")
 
 const app = express()
-app.use(cors())
+app.use(cors({
+  origin: process.env.NODE_ENV === "production"
+    ? ["https://marvel-music-quiz.vercel.app", "https://marvelmusicquiz-production.up.railway.app"]
+    : "http://localhost:3000",
+  credentials: true
+}))
 app.use(express.json())
 
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === "production"
-      ? "https://marvel-music-quiz.vercel.app"
+      ? ["https://marvel-music-quiz.vercel.app", "https://marvelmusicquiz-production.up.railway.app"]
       : "http://localhost:3000",
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: true,
+    transports: ['websocket', 'polling']
   },
 })
 

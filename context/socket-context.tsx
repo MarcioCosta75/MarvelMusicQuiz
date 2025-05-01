@@ -2,9 +2,8 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState, useCallback } from "react"
-import type { Socket } from "socket.io-client"
+import { io, type Socket } from "socket.io-client"
 import type { Player, MarvelSong } from "@/lib/types"
-import { socket as socketInstance } from "@/lib/socket"
 
 // Define the shape of our context
 interface SocketContextType {
@@ -24,6 +23,9 @@ interface SocketContextType {
 // Create the context
 const SocketContext = createContext<SocketContextType | undefined>(undefined)
 
+// Socket.io server URL
+const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:3001"
+
 export interface JoinRoomResponse {
   success: boolean;
   error?: string;
@@ -40,6 +42,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
+    // Initialize socket connection
+    const socketInstance = io(SOCKET_SERVER_URL)
+
     // Set up event listeners
     socketInstance.on("connect", () => {
       console.log("Connected to socket server")
@@ -152,7 +157,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   )
 }
 
-// Hook for using the socket context
+// Custom hook to use the socket context
 export const useSocket = () => {
   const context = useContext(SocketContext)
   if (context === undefined) {

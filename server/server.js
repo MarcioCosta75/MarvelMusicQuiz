@@ -7,45 +7,16 @@ const { generateRoomCode } = require("./utils")
 const shazamRouter = require("./shazam")
 
 const app = express()
-app.use(cors({
-  origin: ["https://marvel-music-quiz.vercel.app", "http://localhost:3000"],
-  credentials: true,
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"]
-}))
+app.use(cors())
 app.use(express.json())
 
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
-    origin: ["https://marvel-music-quiz.vercel.app", "http://localhost:3000"],
-    methods: ["GET", "POST", "OPTIONS"],
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"]
+    origin: process.env.NODE_ENV === "production" ? "https://your-production-domain.com" : "http://localhost:3000",
+    methods: ["GET", "POST"],
   },
-  transports: ['polling', 'websocket'],
-  allowEIO3: true,
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  maxHttpBufferSize: 1e8,
-  cookie: {
-    name: "io",
-    path: "/",
-    httpOnly: true,
-    sameSite: "none",
-    secure: true
-  }
 })
-
-// Log connection events
-io.engine.on("connection_error", (err) => {
-  console.log("Connection error:", err);
-});
-
-io.engine.on("headers", (headers, req) => {
-  console.log("Connection headers:", headers);
-  console.log("Connection request origin:", req.headers.origin);
-});
 
 // Store active rooms and their data
 const rooms = new Map()

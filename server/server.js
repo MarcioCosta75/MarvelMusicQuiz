@@ -8,7 +8,7 @@ const shazamRouter = require("./shazam")
 
 const app = express()
 app.use(cors({
-  origin: true, // Allow all origins temporarily for debugging
+  origin: ["https://marvel-music-quiz.vercel.app", "http://localhost:3000"],
   credentials: true,
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"]
@@ -18,7 +18,7 @@ app.use(express.json())
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
-    origin: true, // Allow all origins temporarily for debugging
+    origin: ["https://marvel-music-quiz.vercel.app", "http://localhost:3000"],
     methods: ["GET", "POST", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"]

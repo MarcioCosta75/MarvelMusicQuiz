@@ -1,8 +1,9 @@
 import { io } from "socket.io-client"
 
+// Use the full URL including /socket.io
 const SOCKET_URL = process.env.NODE_ENV === "production" 
-  ? "https://marvelmusicquiz-production.up.railway.app"
-  : "http://localhost:3001"
+  ? "https://marvelmusicquiz-production.up.railway.app/socket.io"
+  : "http://localhost:3001/socket.io"
 
 export const socket = io(SOCKET_URL, {
   autoConnect: true,
@@ -15,6 +16,9 @@ export const socket = io(SOCKET_URL, {
   withCredentials: true,
   forceNew: true,
   path: '/socket.io',
+  extraHeaders: {
+    "x-requested-with": "XMLHttpRequest"
+  }
 })
 
 let reconnectAttempts = 0;
@@ -30,7 +34,7 @@ socket.on("connect_error", (error) => {
 });
 
 socket.on("connect", () => {
-  console.log("Socket connected successfully");
+  console.log("Socket connected successfully to:", SOCKET_URL);
   reconnectAttempts = 0;
 });
 

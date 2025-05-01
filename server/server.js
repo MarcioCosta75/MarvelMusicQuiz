@@ -8,24 +8,20 @@ const shazamRouter = require("./shazam")
 
 const app = express()
 app.use(cors({
-  origin: process.env.NODE_ENV === "production"
-    ? ["https://marvel-music-quiz.vercel.app"]
-    : "http://localhost:3000",
+  origin: true, // Allow all origins temporarily for debugging
   credentials: true,
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"]
 }))
 app.use(express.json())
 
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === "production"
-      ? ["https://marvel-music-quiz.vercel.app"]
-      : "http://localhost:3000",
-    methods: ["GET", "POST"],
+    origin: true, // Allow all origins temporarily for debugging
+    methods: ["GET", "POST", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"]
   },
   allowEIO3: true,
   pingTimeout: 60000,
@@ -42,11 +38,9 @@ const io = new Server(server, {
   },
   handlePreflightRequest: (req, res) => {
     res.writeHead(200, {
-      "Access-Control-Allow-Origin": process.env.NODE_ENV === "production"
-        ? "https://marvel-music-quiz.vercel.app"
-        : "http://localhost:3000",
-      "Access-Control-Allow-Methods": "GET,POST",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Origin": req.headers.origin || "*",
+      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, x-requested-with",
       "Access-Control-Allow-Credentials": true,
     });
     res.end();
@@ -59,7 +53,8 @@ io.engine.on("connection_error", (err) => {
 });
 
 io.engine.on("headers", (headers, req) => {
-  console.log("Headers:", headers);
+  console.log("Connection headers:", headers);
+  console.log("Connection request origin:", req.headers.origin);
 });
 
 // Store active rooms and their data

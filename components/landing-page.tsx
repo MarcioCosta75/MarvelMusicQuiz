@@ -221,7 +221,6 @@ export default function LandingPage() {
     if (!isHost) return
     const randomIndex = Math.floor(Math.random() * marvelSongs.length)
     const song = marvelSongs[randomIndex]
-    setCurrentSong(song)
     startGame(roomCode, song)
   }, [isHost, roomCode, startGame])
 
@@ -240,7 +239,6 @@ export default function LandingPage() {
     if (round < totalRounds) {
       const randomIndex = Math.floor(Math.random() * marvelSongs.length)
       const song = marvelSongs[randomIndex]
-      setCurrentSong(song)
       nextRound(roomCode, song)
     } else {
       // Se for a última ronda, emitir evento para todos

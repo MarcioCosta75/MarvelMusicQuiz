@@ -44,61 +44,52 @@ function normalizeString(str) {
 function fuzzyMatch(guess, target) {
   if (!guess || !target) return false;
   
+  // Normalizar strings
+  const normalizeString = (str) => {
+    return str.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
+      .trim();
+  };
+  
   const normalizedGuess = normalizeString(guess);
   const normalizedTarget = normalizeString(target);
   
-  // Match exato
+  // Se for exatamente igual após normalização, retorna true
   if (normalizedGuess === normalizedTarget) return true;
   
-  // Dividir em palavras
-  const guessWords = normalizedGuess.split(' ');
-  const targetWords = normalizedTarget.split(' ');
-  
-  // Se houver apenas uma palavra em cada, fazer comparação mais estrita
-  if (guessWords.length === 1 && targetWords.length === 1) {
-    // Se a palavra mais curta tiver menos de 4 caracteres, exigir match exato
-    if (guessWords[0].length < 4 || targetWords[0].length < 4) return false;
-    
-    // Se a diferença de tamanho for maior que 1 caractere, não considerar match
-    if (Math.abs(guessWords[0].length - targetWords[0].length) > 1) return false;
-    
-    // Verificar se as palavras são similares (máximo 1 caractere diferente)
-    let differences = 0;
-    const shorter = guessWords[0].length < targetWords[0].length ? guessWords[0] : targetWords[0];
-    const longer = guessWords[0].length < targetWords[0].length ? targetWords[0] : guessWords[0];
-    
-    for (let i = 0; i < shorter.length; i++) {
-      if (shorter[i] !== longer[i]) differences++;
-      if (differences > 1) return false;
+  // Se for uma palavra única
+  if (!normalizedGuess.includes(' ')) {
+    // Se a palavra for curta (menos de 4 caracteres), requer match exato
+    if (normalizedGuess.length < 4) {
+      return normalizedGuess === normalizedTarget;
     }
     
-    return differences <= 1;
+    // Para palavras mais longas, permite diferença de 1 caractere
+    const maxDiff = Math.min(1, Math.floor(normalizedGuess.length * 0.1));
+    return Math.abs(normalizedGuess.length - normalizedTarget.length) <= maxDiff &&
+           (normalizedTarget.includes(normalizedGuess) || normalizedGuess.includes(normalizedTarget));
   }
   
-  // Para múltiplas palavras, verificar se cada palavra significativa da guess existe no target
-  return guessWords.every(word => {
-    // Ignorar palavras muito curtas
-    if (word.length < 4) return true;
-    
-    // Verificar se a palavra existe no target
+  // Para múltiplas palavras
+  const guessWords = normalizedGuess.split(' ').filter(w => w.length >= 3);
+  const targetWords = normalizedTarget.split(' ').filter(w => w.length >= 3);
+  
+  // Se não houver palavras significativas, retorna false
+  if (guessWords.length === 0 || targetWords.length === 0) return false;
+  
+  // Verifica se todas as palavras significativas do palpite existem no alvo
+  return guessWords.every(guessWord => {
     return targetWords.some(targetWord => {
-      // Se a palavra do target for muito curta, ignorar
-      if (targetWord.length < 4) return false;
-      
-      // Se a diferença de tamanho for maior que 1 caractere, não considerar match
-      if (Math.abs(targetWord.length - word.length) > 1) return false;
-      
-      // Verificar se as palavras são similares (máximo 1 caractere diferente)
-      let differences = 0;
-      const shorter = word.length < targetWord.length ? word : targetWord;
-      const longer = word.length < targetWord.length ? targetWord : word;
-      
-      for (let i = 0; i < shorter.length; i++) {
-        if (shorter[i] !== longer[i]) differences++;
-        if (differences > 1) return false;
+      // Para palavras curtas, requer match exato
+      if (guessWord.length < 4) {
+        return guessWord === targetWord;
       }
-      
-      return differences <= 1;
+      // Para palavras mais longas, permite diferença de 1 caractere
+      const maxDiff = Math.min(1, Math.floor(guessWord.length * 0.1));
+      return Math.abs(guessWord.length - targetWord.length) <= maxDiff &&
+             (targetWord.includes(guessWord) || guessWord.includes(targetWord));
     });
   });
 }
@@ -257,11 +248,27 @@ io.on('connection', (socket) => {
     const movieMatch = fuzzyMatch(guess, room.currentSong?.movie || '');
     const isCorrect = characterMatch || movieMatch;
     
+    console.log(`[DEBUG] Palpite: "${guess}"`);
+    console.log(`[DEBUG] Personagem correto: "${room.currentSong?.character}"`);
+    console.log(`[DEBUG] Filme correto: "${room.currentSong?.movie}"`);
+    console.log(`[DEBUG] Música: "${room.currentSong?.title}"`);
+    console.log(`[DEBUG] Artista: "${room.currentSong?.artist}"`);
+    console.log(`[DEBUG] Match personagem: ${characterMatch}`);
+    console.log(`[DEBUG] Match filme: ${movieMatch}`);
+    
     room.correctGuesses[playerId] = isCorrect;
     
     // Atualizar placar se acertou
     if (isCorrect) {
-      room.scores[playerId] = (room.scores[playerId] || 0) + 10;
+      // Calcular pontos baseado na ordem de resposta
+      const correctPlayers = Object.entries(room.correctGuesses)
+        .filter(([_, isCorrect]) => isCorrect)
+        .map(([id]) => id);
+      
+      const playerRank = correctPlayers.indexOf(playerId) + 1;
+      const points = Math.max(10 - (playerRank - 1) * 2, 1);
+      
+      room.scores[playerId] = (room.scores[playerId] || 0) + points;
     }
     
     io.to(roomCode).emit('guess_submitted', {

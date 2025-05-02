@@ -347,11 +347,6 @@ io.on('connection', (socket) => {
         return aTime - bTime;
       });
 
-    // Calcular pontos baseado no número total de rodadas
-    const pointsPerRound = 10;
-    const maxPoints = pointsPerRound * room.totalRounds;
-    const pointsPerRank = Math.floor(maxPoints / room.totalRounds);
-
     // Assign points based on rank (10, 8, 6, 4, 2, 1)
     correctPlayers.forEach((player) => {
       const points = Math.max(10 - (rank - 1) * 2, 1);
@@ -359,9 +354,15 @@ io.on('connection', (socket) => {
       rank++;
     });
 
+    // Atualizar pontuação da rodada
     room.roundScores = newScores;
-    Object.keys(newScores).forEach((playerId) => {
-      room.scores[playerId] = (room.scores[playerId] || 0) + newScores[playerId];
+
+    // Atualizar pontuação total
+    Object.keys(room.scores).forEach((playerId) => {
+      // Se o jogador acertou nesta rodada, adicionar os pontos
+      if (newScores[playerId]) {
+        room.scores[playerId] = (room.scores[playerId] || 0) + newScores[playerId];
+      }
     });
 
     // Primeiro emitir que alguém acertou e esperar 3 segundos
@@ -404,15 +405,22 @@ io.on('connection', (socket) => {
         return aTime - bTime;
       });
 
-    // Assign points based on rank
+    // Assign points based on rank (10, 8, 6, 4, 2, 1)
     correctPlayers.forEach((player) => {
-      newScores[player.id] = Math.max(10 - (rank - 1) * 2, 1);
+      const points = Math.max(10 - (rank - 1) * 2, 1);
+      newScores[player.id] = points;
       rank++;
     });
 
+    // Atualizar pontuação da rodada
     room.roundScores = newScores;
-    Object.keys(newScores).forEach((playerId) => {
-      room.scores[playerId] = (room.scores[playerId] || 0) + newScores[playerId];
+
+    // Atualizar pontuação total
+    Object.keys(room.scores).forEach((playerId) => {
+      // Se o jogador acertou nesta rodada, adicionar os pontos
+      if (newScores[playerId]) {
+        room.scores[playerId] = (room.scores[playerId] || 0) + newScores[playerId];
+      }
     });
 
     room.gameState = 'scoreboard';

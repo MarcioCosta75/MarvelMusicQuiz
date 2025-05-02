@@ -42,11 +42,19 @@ function normalizeString(str) {
 
 // Função para verificar se uma string contém outra, independente da ordem das palavras
 function fuzzyMatch(guess, target) {
+  if (!guess || !target) return false;
+  
   const normalizedGuess = normalizeString(guess);
   const normalizedTarget = normalizeString(target);
+  
   if (normalizedGuess === normalizedTarget) return true;
+  
+  // Verificar se as palavras da guess estão contidas no target
   const guessWords = normalizedGuess.split(' ');
   const targetWords = normalizedTarget.split(' ');
+  
+  // Ignorar palavras muito curtas (menos de 3 letras)
+  // e verificar se cada palavra significativa da guess existe no target
   return guessWords.every(word =>
     word.length < 3 || targetWords.some(targetWord =>
       targetWord.includes(word) || word.includes(targetWord)
@@ -136,7 +144,6 @@ io.on('connection', (socket) => {
 
     room.gameState = 'game';
     room.currentSong = song;
-    console.log(`[start_game] currentSong definido para sala ${roomCode}:`, song);
     room.playerGuesses = {};
     room.correctGuesses = {};
     room.roundScores = {};
@@ -153,8 +160,6 @@ io.on('connection', (socket) => {
       totalRounds: room.totalRounds,
       timeLeft: room.timeLeft,
     });
-    // Emitir current_song para todos
-    io.to(roomCode).emit('current_song', { currentSong: room.currentSong });
   });
 
   // Receber ready de cada jogador
@@ -207,9 +212,9 @@ io.on('connection', (socket) => {
     room.playerGuesses[playerId] = guess;
     
     // Validação: acerta se personagem OU filme
-    const isCorrect =
-      fuzzyMatch(guess, room.currentSong?.character || '') ||
-      fuzzyMatch(guess, room.currentSong?.movie || '');
+    const characterMatch = fuzzyMatch(guess, room.currentSong?.character || '');
+    const movieMatch = fuzzyMatch(guess, room.currentSong?.movie || '');
+    const isCorrect = characterMatch || movieMatch;
     
     room.correctGuesses[playerId] = isCorrect;
     
@@ -236,7 +241,6 @@ io.on('connection', (socket) => {
         clearInterval(roomTimers.get(roomCode));
         roomTimers.delete(roomCode);
       }
-      console.log(`[submit_guess] Emitindo all_failed para sala ${roomCode}. currentSong:`, room.currentSong);
       io.to(roomCode).emit('all_failed', {
         correctAnswer: `${room.currentSong.character} (${room.currentSong.movie})`,
       });
@@ -265,7 +269,6 @@ io.on('connection', (socket) => {
     // Calculate scores (ninguém acertou, logo ninguém ganha pontos)
     room.roundScores = {};
     room.gameState = "scoreboard";
-    console.log(`[endRoundAuto] Emitindo round_ended para sala ${roomCode}. currentSong:`, room.currentSong);
     io.to(roomCode).emit("round_ended", {
       gameState: "scoreboard",
       roundScores: room.roundScores,
@@ -292,7 +295,6 @@ io.on('connection', (socket) => {
     });
 
     // Primeiro emitir que alguém acertou e esperar 3 segundos
-    console.log(`[endRoundImmediate] Emitindo correct_answer para sala ${roomCode}. currentSong:`, room.currentSong);
     io.to(roomCode).emit("correct_answer", {
       correctAnswer: room.currentSong ? `${room.currentSong.character} (${room.currentSong.movie})` : "Marvel Character",
     });
@@ -300,7 +302,6 @@ io.on('connection', (socket) => {
     // Depois de 3 segundos, avançar para o scoreboard
     setTimeout(() => {
       room.gameState = "scoreboard";
-      console.log(`[endRoundImmediate] Emitindo round_ended para sala ${roomCode}. currentSong:`, room.currentSong);
       io.to(roomCode).emit("round_ended", {
         gameState: "scoreboard",
         roundScores: room.roundScores,
@@ -349,7 +350,6 @@ io.on('connection', (socket) => {
     if (room.currentRound <= room.totalRounds) {
       room.gameState = 'game';
       room.currentSong = song;
-      console.log(`[next_round] currentSong definido para sala ${roomCode}:`, song);
       room.playerGuesses = {};
       room.correctGuesses = {};
       room.roundScores = {};
@@ -362,8 +362,6 @@ io.on('connection', (socket) => {
         totalRounds: room.totalRounds,
         timeLeft: room.timeLeft,
       });
-      // Emitir current_song para todos
-      io.to(roomCode).emit('current_song', { currentSong: room.currentSong });
     } else {
       room.gameState = 'gameOver';
       io.to(roomCode).emit('game_over', {

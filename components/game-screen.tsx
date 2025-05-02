@@ -198,7 +198,8 @@ export default function GameScreen({
       try {
         // Pesquisar no Shazam usando o título da música
         const q = songToTry.title
-        const shazamRes = await fetch("http://localhost:3001/shazam/preview?q=" + encodeURIComponent(q))
+        const baseUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+        const shazamRes = await fetch(`${baseUrl}/shazam/preview?q=${encodeURIComponent(q)}`)
         if (shazamRes.ok) {
           const data = await shazamRes.json()
           if (!cancelled && data.uri && typeof data.uri === 'string' && data.uri.startsWith('http')) {

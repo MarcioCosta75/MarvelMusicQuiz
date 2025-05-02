@@ -189,7 +189,15 @@ export default function GameScreen({
     if (!socket) return;
     let cancelled = false;
     let attempts = 0;
-    const maxAttempts = 5;
+    const maxAttempts = 3;
+    // Função de fuzzy match para títulos
+    function normalizeTitle(title: string) {
+      return title
+        .toLowerCase()
+        .replace(/[^a-z0-9]/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
     // Handler para evento current_song
     const handleCurrentSong = (data: { currentSong: MarvelSong }) => {
       if (!data.currentSong) return;
@@ -204,14 +212,18 @@ export default function GameScreen({
           const shazamRes = await fetch(`${baseUrl}/shazam/preview?q=${encodeURIComponent(q)}`);
           if (shazamRes.ok) {
             const dataShazam = await shazamRes.json();
-            // Só aceitar se o título do Shazam for igual ao do MarvelSong
+            // Fuzzy match entre título do Shazam e do MarvelSong
             if (
               !cancelled &&
               dataShazam.uri &&
               typeof dataShazam.uri === 'string' &&
               dataShazam.uri.startsWith('http') &&
               dataShazam.title &&
-              dataShazam.title.toLowerCase().trim() === songToTry.title.toLowerCase().trim()
+              (
+                normalizeTitle(dataShazam.title) === normalizeTitle(songToTry.title) ||
+                normalizeTitle(dataShazam.title).includes(normalizeTitle(songToTry.title)) ||
+                normalizeTitle(songToTry.title).includes(normalizeTitle(dataShazam.title))
+              )
             ) {
               setMusicPreview(dataShazam.uri);
               setMusicInfo(dataShazam);
@@ -225,10 +237,21 @@ export default function GameScreen({
               return;
             }
           }
-          // Se não encontrou preview válido, não toca nada
-          setMusicPreview(null);
-          setMusicInfo(null);
-          setLoadingMusic(false);
+          // Se não encontrou preview válido, tentar até maxAttempts
+          attempts++;
+          if (!cancelled && attempts < maxAttempts) {
+            setTimeout(() => fetchMusic(songToTry), 500);
+          } else {
+            setMusicPreview(null);
+            setMusicInfo(null);
+            setLoadingMusic(false);
+            // Se for host, avançar automaticamente para a próxima música após 3 segundos
+            if (isHost && socket) {
+              setTimeout(() => {
+                socket.emit("next_round", { roomCode, song: marvelSongs[Math.floor(Math.random() * marvelSongs.length)] });
+              }, 3000);
+            }
+          }
         } catch (e) {
           if (!cancelled) {
             setMusicPreview(null);

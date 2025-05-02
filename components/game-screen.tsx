@@ -184,7 +184,7 @@ export default function GameScreen({
     }
   }, [isHost, currentSong?.audioUrl, roomCode, toggleMusic])
 
-  // Buscar preview do Shazam apenas ao receber o evento do backend
+  // Buscar preview do Shazam usando o título da música recebida do backend
   useEffect(() => {
     if (!socket) return;
     let cancelled = false;
@@ -203,28 +203,32 @@ export default function GameScreen({
           const baseUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
           const shazamRes = await fetch(`${baseUrl}/shazam/preview?q=${encodeURIComponent(q)}`);
           if (shazamRes.ok) {
-            const data = await shazamRes.json();
-            if (!cancelled && data.uri && typeof data.uri === 'string' && data.uri.startsWith('http')) {
-              setMusicPreview(data.uri);
-              setMusicInfo(data);
+            const dataShazam = await shazamRes.json();
+            // Só aceitar se o título do Shazam for igual ao do MarvelSong
+            if (
+              !cancelled &&
+              dataShazam.uri &&
+              typeof dataShazam.uri === 'string' &&
+              dataShazam.uri.startsWith('http') &&
+              dataShazam.title &&
+              dataShazam.title.toLowerCase().trim() === songToTry.title.toLowerCase().trim()
+            ) {
+              setMusicPreview(dataShazam.uri);
+              setMusicInfo(dataShazam);
               // Emitir preview para todos se for host
               if (isHost && socket) {
-                socket.emit("music_preview", { roomCode, musicPreview: data.uri });
-                socket.emit("music_info", { roomCode, musicInfo: data });
+                socket.emit("music_preview", { roomCode, musicPreview: dataShazam.uri });
+                socket.emit("music_info", { roomCode, musicInfo: dataShazam });
                 socket.emit("toggle_music", { roomCode, isPlaying: true });
               }
               setLoadingMusic(false);
               return;
             }
           }
-          // Se não encontrou preview, tentar outra música
-          if (!cancelled && attempts < maxAttempts) {
-            attempts++;
-            // Não sorteie outra música, apenas pare se não encontrar preview
-            setTimeout(() => fetchMusic(songToTry), 200);
-          } else {
-            setLoadingMusic(false);
-          }
+          // Se não encontrou preview válido, não toca nada
+          setMusicPreview(null);
+          setMusicInfo(null);
+          setLoadingMusic(false);
         } catch (e) {
           if (!cancelled) {
             setMusicPreview(null);

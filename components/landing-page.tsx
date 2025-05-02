@@ -341,6 +341,7 @@ export default function LandingPage() {
                         onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
                         maxLength={6}
                         className="text-center text-xl tracking-widest"
+                        name="roomCode"
                       />
                       <Button
                         onClick={handleJoinRoom}

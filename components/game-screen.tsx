@@ -204,8 +204,8 @@ export default function GameScreen({
       setMusicPreview(null)
       setMusicInfo(null)
       try {
-        // Pesquisar no Shazam usando o título da música
-        const q = songToTry.title
+        // Pesquisar no Shazam usando o título e artista da música
+        const q = `${songToTry.title} ${songToTry.artist}`
         const baseUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
         const shazamRes = await fetch(`${baseUrl}/shazam/preview?q=${encodeURIComponent(q)}`)
         if (shazamRes.ok) {

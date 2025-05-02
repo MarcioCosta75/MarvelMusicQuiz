@@ -309,11 +309,27 @@ io.on('connection', (socket) => {
     
     // Calculate scores
     const newScores = {};
-    room.players.forEach((player) => {
-      if (room.correctGuesses[player.id]) {
-        newScores[player.id] = 10;
-      }
+    let rank = 1;
+
+    // Sort players by who answered correctly first
+    const correctPlayers = room.players
+      .filter((p) => room.correctGuesses[p.id])
+      .sort((a, b) => {
+        const aTime = room.playerGuesses[a.id]
+          ? room.players.findIndex((p) => p.id === a.id)
+          : Number.POSITIVE_INFINITY;
+        const bTime = room.playerGuesses[b.id]
+          ? room.players.findIndex((p) => p.id === b.id)
+          : Number.POSITIVE_INFINITY;
+        return aTime - bTime;
+      });
+
+    // Assign points based on rank
+    correctPlayers.forEach((player) => {
+      newScores[player.id] = Math.max(10 - (rank - 1) * 2, 1);
+      rank++;
     });
+
     room.roundScores = newScores;
     Object.keys(newScores).forEach((playerId) => {
       room.scores[playerId] = (room.scores[playerId] || 0) + newScores[playerId];
@@ -344,10 +360,25 @@ io.on('connection', (socket) => {
 
     // Calculate scores
     const newScores = {};
-    room.players.forEach((player) => {
-      if (room.correctGuesses[player.id]) {
-        newScores[player.id] = 10;
-      }
+    let rank = 1;
+
+    // Sort players by who answered correctly first
+    const correctPlayers = room.players
+      .filter((p) => room.correctGuesses[p.id])
+      .sort((a, b) => {
+        const aTime = room.playerGuesses[a.id]
+          ? room.players.findIndex((p) => p.id === a.id)
+          : Number.POSITIVE_INFINITY;
+        const bTime = room.playerGuesses[b.id]
+          ? room.players.findIndex((p) => p.id === b.id)
+          : Number.POSITIVE_INFINITY;
+        return aTime - bTime;
+      });
+
+    // Assign points based on rank
+    correctPlayers.forEach((player) => {
+      newScores[player.id] = Math.max(10 - (rank - 1) * 2, 1);
+      rank++;
     });
 
     room.roundScores = newScores;

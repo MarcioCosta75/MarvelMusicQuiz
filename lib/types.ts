@@ -9,6 +9,7 @@ export interface Player {
 export interface MarvelSong {
   id: string
   title: string
+  artist: string
   character: string
   movie: string
   audioUrl: string

@@ -56,17 +56,23 @@ function fuzzyMatch(guess, target) {
   
   // Se houver apenas uma palavra em cada, fazer comparação mais estrita
   if (guessWords.length === 1 && targetWords.length === 1) {
-    // Verificar se uma palavra contém a outra, mas apenas se a diferença de tamanho for pequena
+    // Se a palavra mais curta tiver menos de 4 caracteres, exigir match exato
+    if (guessWords[0].length < 4 || targetWords[0].length < 4) return false;
+    
+    // Se a diferença de tamanho for maior que 1 caractere, não considerar match
+    if (Math.abs(guessWords[0].length - targetWords[0].length) > 1) return false;
+    
+    // Verificar se as palavras são similares (máximo 1 caractere diferente)
+    let differences = 0;
     const shorter = guessWords[0].length < targetWords[0].length ? guessWords[0] : targetWords[0];
     const longer = guessWords[0].length < targetWords[0].length ? targetWords[0] : guessWords[0];
     
-    // Se a palavra mais curta tiver menos de 4 caracteres, exigir match exato
-    if (shorter.length < 4) return false;
+    for (let i = 0; i < shorter.length; i++) {
+      if (shorter[i] !== longer[i]) differences++;
+      if (differences > 1) return false;
+    }
     
-    // Se a diferença de tamanho for maior que 2 caracteres, não considerar match
-    if (longer.length - shorter.length > 2) return false;
-    
-    return longer.includes(shorter);
+    return differences <= 1;
   }
   
   // Para múltiplas palavras, verificar se cada palavra significativa da guess existe no target
@@ -79,10 +85,20 @@ function fuzzyMatch(guess, target) {
       // Se a palavra do target for muito curta, ignorar
       if (targetWord.length < 4) return false;
       
-      // Se a diferença de tamanho for maior que 2 caracteres, não considerar match
-      if (Math.abs(targetWord.length - word.length) > 2) return false;
+      // Se a diferença de tamanho for maior que 1 caractere, não considerar match
+      if (Math.abs(targetWord.length - word.length) > 1) return false;
       
-      return targetWord.includes(word) || word.includes(targetWord);
+      // Verificar se as palavras são similares (máximo 1 caractere diferente)
+      let differences = 0;
+      const shorter = word.length < targetWord.length ? word : targetWord;
+      const longer = word.length < targetWord.length ? targetWord : word;
+      
+      for (let i = 0; i < shorter.length; i++) {
+        if (shorter[i] !== longer[i]) differences++;
+        if (differences > 1) return false;
+      }
+      
+      return differences <= 1;
     });
   });
 }
@@ -291,8 +307,15 @@ io.on('connection', (socket) => {
   function endRoundAuto(roomCode) {
     if (!rooms[roomCode]) return;
     const room = rooms[roomCode];
+    
     // Calculate scores (ninguém acertou, logo ninguém ganha pontos)
     room.roundScores = {};
+    
+    // Atualizar pontuação total
+    Object.keys(room.scores).forEach((playerId) => {
+      room.scores[playerId] = room.scores[playerId] || 0;
+    });
+    
     room.gameState = "scoreboard";
     io.to(roomCode).emit("round_ended", {
       gameState: "scoreboard",
@@ -324,9 +347,15 @@ io.on('connection', (socket) => {
         return aTime - bTime;
       });
 
-    // Assign points based on rank
+    // Calcular pontos baseado no número total de rodadas
+    const pointsPerRound = 10;
+    const maxPoints = pointsPerRound * room.totalRounds;
+    const pointsPerRank = Math.floor(maxPoints / room.totalRounds);
+
+    // Assign points based on rank (10, 8, 6, 4, 2, 1)
     correctPlayers.forEach((player) => {
-      newScores[player.id] = Math.max(10 - (rank - 1) * 2, 1);
+      const points = Math.max(10 - (rank - 1) * 2, 1);
+      newScores[player.id] = points;
       rank++;
     });
 

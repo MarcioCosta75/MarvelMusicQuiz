@@ -168,7 +168,11 @@ export default function GameScreen({
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = '';
+      audioRef.current.load();
     }
+    setIsPlaying(false);
+    setMusicPreview(null);
+    setMusicInfo(null);
   }, [round]);
 
   // Initialize audio
@@ -188,6 +192,8 @@ export default function GameScreen({
         audioRef.current.removeEventListener("ended", () => {
           setIsPlaying(false)
         })
+        audioRef.current.src = ''
+        audioRef.current.load()
       }
     }
   }, [isHost, currentSong?.audioUrl, roomCode, toggleMusic])

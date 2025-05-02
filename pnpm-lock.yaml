@@ -165,7 +165,7 @@ importers:
         specifier: latest
         version: 4.8.1
       socket.io-client:
-        specifier: latest
+        specifier: ^4.8.1
         version: 4.8.1
       sonner:
         specifier: ^1.7.1

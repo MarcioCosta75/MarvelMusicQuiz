@@ -153,6 +153,8 @@ io.on('connection', (socket) => {
       totalRounds: room.totalRounds,
       timeLeft: room.timeLeft,
     });
+    // Emitir current_song para todos
+    io.to(roomCode).emit('current_song', { currentSong: room.currentSong });
   });
 
   // Receber ready de cada jogador
@@ -360,6 +362,8 @@ io.on('connection', (socket) => {
         totalRounds: room.totalRounds,
         timeLeft: room.timeLeft,
       });
+      // Emitir current_song para todos
+      io.to(roomCode).emit('current_song', { currentSong: room.currentSong });
     } else {
       room.gameState = 'gameOver';
       io.to(roomCode).emit('game_over', {

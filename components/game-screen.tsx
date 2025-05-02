@@ -184,59 +184,63 @@ export default function GameScreen({
     }
   }, [isHost, currentSong?.audioUrl, roomCode, toggleMusic])
 
-  // Buscar preview no Shazam usando o título da música
+  // Buscar preview do Shazam apenas ao receber o evento do backend
   useEffect(() => {
-    if (!isHost) return;
-    if (!currentSong) return;
+    if (!socket) return;
     let cancelled = false;
     let attempts = 0;
     const maxAttempts = 5;
-    async function fetchMusic(songToTry: MarvelSong) {
-      setLoadingMusic(true)
-      setMusicPreview(null)
-      setMusicInfo(null)
-      try {
-        // Pesquisar no Shazam usando o título da música
-        const q = songToTry.title
-        const baseUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
-        const shazamRes = await fetch(`${baseUrl}/shazam/preview?q=${encodeURIComponent(q)}`)
-        if (shazamRes.ok) {
-          const data = await shazamRes.json()
-          if (!cancelled && data.uri && typeof data.uri === 'string' && data.uri.startsWith('http')) {
-            setMusicPreview(data.uri)
-            setMusicInfo(data)
-            // Emitir preview para todos se for host
-            if (socket) {
-              socket.emit("music_preview", { roomCode, musicPreview: data.uri })
-              socket.emit("music_info", { roomCode, musicInfo: data })
-              // Iniciar música e timer para todos
-              socket.emit("toggle_music", { roomCode, isPlaying: true })
+    // Handler para evento current_song
+    const handleCurrentSong = (data: { currentSong: MarvelSong }) => {
+      if (!data.currentSong) return;
+      setMusicPreview(null);
+      setMusicInfo(null);
+      setLoadingMusic(true);
+      // Buscar preview no Shazam usando o título da música recebida do backend
+      async function fetchMusic(songToTry: MarvelSong) {
+        try {
+          const q = songToTry.title;
+          const baseUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+          const shazamRes = await fetch(`${baseUrl}/shazam/preview?q=${encodeURIComponent(q)}`);
+          if (shazamRes.ok) {
+            const data = await shazamRes.json();
+            if (!cancelled && data.uri && typeof data.uri === 'string' && data.uri.startsWith('http')) {
+              setMusicPreview(data.uri);
+              setMusicInfo(data);
+              // Emitir preview para todos se for host
+              if (isHost && socket) {
+                socket.emit("music_preview", { roomCode, musicPreview: data.uri });
+                socket.emit("music_info", { roomCode, musicInfo: data });
+                socket.emit("toggle_music", { roomCode, isPlaying: true });
+              }
+              setLoadingMusic(false);
+              return;
             }
-            setLoadingMusic(false)
-            return;
+          }
+          // Se não encontrou preview, tentar outra música
+          if (!cancelled && attempts < maxAttempts) {
+            attempts++;
+            // Não sorteie outra música, apenas pare se não encontrar preview
+            setTimeout(() => fetchMusic(songToTry), 200);
+          } else {
+            setLoadingMusic(false);
+          }
+        } catch (e) {
+          if (!cancelled) {
+            setMusicPreview(null);
+            setMusicInfo(null);
+            setLoadingMusic(false);
           }
         }
-        // Se não encontrou preview, tentar outra música
-        if (!cancelled && attempts < maxAttempts) {
-          attempts++;
-          const availableSongs = marvelSongs.filter(s => s.id !== songToTry.id)
-          const nextSong = availableSongs[Math.floor(Math.random() * availableSongs.length)]
-          // Atualizar currentSong para nova tentativa
-          setTimeout(() => fetchMusic(nextSong), 200)
-        } else {
-          setLoadingMusic(false)
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setMusicPreview(null)
-          setMusicInfo(null)
-          setLoadingMusic(false)
-        }
       }
-    }
-    fetchMusic(currentSong)
-    return () => { cancelled = true }
-  }, [currentSong, isHost, socket, roomCode])
+      fetchMusic(data.currentSong);
+    };
+    socket.on("current_song", handleCurrentSong);
+    return () => {
+      cancelled = true;
+      socket.off("current_song", handleCurrentSong);
+    };
+  }, [socket, isHost, roomCode]);
 
   // Set up socket event listeners
   useEffect(() => {

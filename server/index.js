@@ -7,17 +7,24 @@ const shazamRouter = require('./shazam');
 
 const app = express();
 app.use(cors());
-const server = http.createServer(app);
+app.use(express.json());
 
+const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: process.env.NODE_ENV === "production" ? "*" : "http://localhost:3000",
     methods: ['GET', 'POST']
   }
 });
 
-// Estrutura em memória para salas e jogadores
-const rooms = {};
+// Store active rooms and their data
+const rooms = new Map();
+// Store ready players for each room
+const readyPlayers = new Map();
+// Guardar timers ativos por sala
+const roomTimers = new Map();
+// Jogadores prontos para jogar de novo
+const playAgainReady = new Map();
 
 // Função para normalizar strings para comparação
 function normalizeString(str) {
@@ -51,7 +58,7 @@ io.on('connection', (socket) => {
   // Criar sala
   socket.on('create_room', ({ totalRounds }, callback) => {
     const roomCode = generateRoomCode();
-    rooms[roomCode] = {
+    rooms.set(roomCode, {
       host: socket.id,
       players: [],
       totalRounds,
@@ -61,15 +68,15 @@ io.on('connection', (socket) => {
       currentSong: null,
       isPlaying: false,
       playAgainReady: {},
-    };
+    });
     socket.join(roomCode);
     callback({ success: true, roomCode, totalRounds });
-    io.to(roomCode).emit('players_updated', { players: rooms[roomCode].players, scores: rooms[roomCode].scores });
+    io.to(roomCode).emit('players_updated', { players: rooms.get(roomCode).players, scores: rooms.get(roomCode).scores });
   });
 
   // Entrar em sala
   socket.on('join_room', ({ roomCode }, callback) => {
-    const room = rooms[roomCode];
+    const room = rooms.get(roomCode);
     if (!room) return callback({ success: false, error: 'Room not found', isHost: false });
     socket.join(roomCode);
     callback({
@@ -86,7 +93,7 @@ io.on('connection', (socket) => {
 
   // Adicionar jogador
   socket.on('add_player', ({ roomCode, player }) => {
-    const room = rooms[roomCode];
+    const room = rooms.get(roomCode);
     if (!room) return;
     if (!room.players.find(p => p.id === player.id)) {
       room.players.push(player);
@@ -97,7 +104,7 @@ io.on('connection', (socket) => {
 
   // Iniciar jogo
   socket.on('start_game', ({ roomCode, song }) => {
-    const room = rooms[roomCode];
+    const room = rooms.get(roomCode);
     if (!room) return;
     room.gameState = 'game';
     room.currentSong = song;
@@ -109,7 +116,7 @@ io.on('connection', (socket) => {
 
   // Tocar/parar música
   socket.on('toggle_music', ({ roomCode, isPlaying }) => {
-    const room = rooms[roomCode];
+    const room = rooms.get(roomCode);
     if (!room) return;
     room.isPlaying = isPlaying;
     io.to(roomCode).emit('music_toggled', { isPlaying });
@@ -117,7 +124,7 @@ io.on('connection', (socket) => {
 
   // Submeter palpite
   socket.on('submit_guess', ({ roomCode, playerId, guess }) => {
-    const room = rooms[roomCode];
+    const room = rooms.get(roomCode);
     if (!room) return;
     if (!room.playerGuesses) room.playerGuesses = {};
     if (!room.correctGuesses) room.correctGuesses = {};
@@ -142,7 +149,7 @@ io.on('connection', (socket) => {
 
   // Terminar ronda
   socket.on('end_round', (roomCode) => {
-    const room = rooms[roomCode];
+    const room = rooms.get(roomCode);
     if (!room) return;
     room.gameState = 'scoreboard';
     io.to(roomCode).emit('round_ended', { gameState: 'scoreboard', roundScores: room.scores, scores: room.scores });
@@ -150,7 +157,7 @@ io.on('connection', (socket) => {
 
   // Próxima ronda
   socket.on('next_round', ({ roomCode, song }) => {
-    const room = rooms[roomCode];
+    const room = rooms.get(roomCode);
     if (!room) return;
     room.currentRound += 1;
     room.currentSong = song;
@@ -161,7 +168,7 @@ io.on('connection', (socket) => {
 
   // Jogar novamente
   socket.on('play_again', (roomCode) => {
-    const room = rooms[roomCode];
+    const room = rooms.get(roomCode);
     if (!room) return;
     room.currentRound = 1;
     room.scores = {};
@@ -175,12 +182,12 @@ io.on('connection', (socket) => {
   // Desconexão
   socket.on('disconnect', () => {
     // Remover jogador de todas as salas
-    for (const roomCode in rooms) {
-      const room = rooms[roomCode];
+    for (const roomCode of rooms.keys()) {
+      const room = rooms.get(roomCode);
       room.players = room.players.filter(p => p.socketId !== socket.id);
       if (room.host === socket.id) {
         io.to(roomCode).emit('host_disconnected');
-        delete rooms[roomCode];
+        rooms.delete(roomCode);
       } else {
         io.to(roomCode).emit('players_updated', { players: room.players, scores: room.scores });
       }
@@ -195,7 +202,7 @@ app.get('/', (req, res) => {
 
 app.use('/shazam', shazamRouter);
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`Servidor Socket.IO a correr na porta ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

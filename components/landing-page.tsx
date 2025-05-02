@@ -132,7 +132,8 @@ export default function LandingPage() {
 
     // Adicionar listener para o evento de resultados finais
     socket.on("final_results_shown", () => {
-      setGameState("final_results")
+      console.log("[socket] final_results_shown recebido");
+      setGameState("final_results");
     })
 
     // Listen for music preview
@@ -245,10 +246,10 @@ export default function LandingPage() {
       nextRound(roomCode, song)
     } else {
       // Se for a última ronda, emitir evento para todos
+      console.log("[socket] Emitindo show_final_results para sala", roomCode);
       if (socket) {
         socket.emit("show_final_results", { roomCode })
       }
-      setGameState("final_results")
     }
   }, [isHost, nextRound, round, roomCode, totalRounds, socket])
 

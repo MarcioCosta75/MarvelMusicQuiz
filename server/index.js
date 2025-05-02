@@ -347,28 +347,24 @@ io.on('connection', (socket) => {
 
     room.currentRound++;
 
-    if (room.currentRound <= room.totalRounds) {
-      room.gameState = 'game';
-      room.currentSong = song;
-      room.playerGuesses = {};
-      room.correctGuesses = {};
-      room.roundScores = {};
-      room.timeLeft = 30;
-      room.isPlaying = false;
+    // Sempre iniciar o jogo, mesmo se for a última rodada
+    room.gameState = 'game';
+    room.currentSong = song;
+    room.playerGuesses = {};
+    room.correctGuesses = {};
+    room.roundScores = {};
+    room.timeLeft = 30;
+    room.isPlaying = false;
 
-      io.to(roomCode).emit('next_round_started', {
-        gameState: 'game',
-        currentRound: room.currentRound,
-        totalRounds: room.totalRounds,
-        timeLeft: room.timeLeft,
-      });
-    } else {
-      room.gameState = 'gameOver';
-      io.to(roomCode).emit('game_over', {
-        gameState: 'gameOver',
-        scores: room.scores,
-      });
-    }
+    io.to(roomCode).emit('next_round_started', {
+      gameState: 'game',
+      currentRound: room.currentRound,
+      totalRounds: room.totalRounds,
+      timeLeft: room.timeLeft,
+    });
+    
+    // O jogo agora só irá para gameOver depois que a última rodada terminar
+    // via o evento show_final_results que é emitido no handleNextRound do cliente
   });
 
   // Jogador marca-se como pronto para jogar de novo
@@ -486,11 +482,19 @@ io.on('connection', (socket) => {
 
   // Novo evento para sincronizar transição para resultados finais
   socket.on('show_final_results', ({ roomCode }) => {
-    if (!rooms[roomCode]) return;
+    console.log(`[socket] show_final_results recebido para sala ${roomCode}`);
+    if (!rooms[roomCode]) {
+      console.log(`[socket] Sala ${roomCode} não encontrada`);
+      return;
+    }
     const room = rooms[roomCode];
     // Apenas o host pode iniciar esta transição
-    if (room.host !== socket.id) return;
+    if (room.host !== socket.id) {
+      console.log(`[socket] Tentativa não autorizada - socket ${socket.id} não é o host`);
+      return;
+    }
     
+    console.log(`[socket] Emitindo final_results_shown para sala ${roomCode}`);
     io.to(roomCode).emit('final_results_shown');
   });
 });

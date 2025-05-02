@@ -81,6 +81,7 @@ export default function LandingPage() {
 
     // Listen for current_song event
     socket.on("current_song", ({ currentSong }) => {
+      console.log("[socket] current_song recebido:", currentSong?.title)
       setCurrentSong(currentSong)
     })
 
@@ -221,6 +222,7 @@ export default function LandingPage() {
     if (!isHost) return
     const randomIndex = Math.floor(Math.random() * marvelSongs.length)
     const song = marvelSongs[randomIndex]
+    setCurrentSong(song)
     startGame(roomCode, song)
   }, [isHost, roomCode, startGame])
 
@@ -239,6 +241,7 @@ export default function LandingPage() {
     if (round < totalRounds) {
       const randomIndex = Math.floor(Math.random() * marvelSongs.length)
       const song = marvelSongs[randomIndex]
+      setCurrentSong(song)
       nextRound(roomCode, song)
     } else {
       // Se for a última ronda, emitir evento para todos

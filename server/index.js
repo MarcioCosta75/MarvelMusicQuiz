@@ -467,6 +467,23 @@ io.on('connection', (socket) => {
     io.to(roomCode).emit('music_info', { musicInfo });
   });
 
+  // Adicionar manipulador para current_song
+  socket.on('current_song', ({ roomCode, currentSong }) => {
+    if (!rooms[roomCode]) return;
+    const room = rooms[roomCode];
+    
+    // Apenas o host deve poder atualizar a música atual
+    if (room.host !== socket.id) return;
+    
+    console.log(`Música atualizada na sala ${roomCode}: ${currentSong.title} (${currentSong.character})`);
+    room.currentSong = currentSong;
+    room.playerGuesses = {};
+    room.correctGuesses = {};
+    
+    // Emitir para todos os jogadores
+    io.to(roomCode).emit('current_song', { currentSong });
+  });
+
   // Novo evento para sincronizar transição para resultados finais
   socket.on('show_final_results', ({ roomCode }) => {
     if (!rooms[roomCode]) return;

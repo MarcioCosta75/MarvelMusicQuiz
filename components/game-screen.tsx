@@ -221,6 +221,13 @@ export default function GameScreen({
           attempts++;
           const availableSongs = marvelSongs.filter(s => s.id !== songToTry.id)
           const nextSong = availableSongs[Math.floor(Math.random() * availableSongs.length)]
+          
+          // IMPORTANTE: Atualizar o servidor com a nova música antes de tentar buscar preview
+          if (socket) {
+            console.log("Atualizando música no servidor para:", nextSong.title)
+            socket.emit("current_song", { roomCode, currentSong: nextSong })
+          }
+          
           // Atualizar currentSong para nova tentativa
           setTimeout(() => fetchMusic(nextSong), 200)
         } else {

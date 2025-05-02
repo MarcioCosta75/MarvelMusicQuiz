@@ -136,6 +136,7 @@ io.on('connection', (socket) => {
 
     room.gameState = 'game';
     room.currentSong = song;
+    console.log(`[start_game] currentSong definido para sala ${roomCode}:`, song);
     room.playerGuesses = {};
     room.correctGuesses = {};
     room.roundScores = {};
@@ -233,6 +234,7 @@ io.on('connection', (socket) => {
         clearInterval(roomTimers.get(roomCode));
         roomTimers.delete(roomCode);
       }
+      console.log(`[submit_guess] Emitindo all_failed para sala ${roomCode}. currentSong:`, room.currentSong);
       io.to(roomCode).emit('all_failed', {
         correctAnswer: `${room.currentSong.character} (${room.currentSong.movie})`,
       });
@@ -261,6 +263,7 @@ io.on('connection', (socket) => {
     // Calculate scores (ninguém acertou, logo ninguém ganha pontos)
     room.roundScores = {};
     room.gameState = "scoreboard";
+    console.log(`[endRoundAuto] Emitindo round_ended para sala ${roomCode}. currentSong:`, room.currentSong);
     io.to(roomCode).emit("round_ended", {
       gameState: "scoreboard",
       roundScores: room.roundScores,
@@ -287,6 +290,7 @@ io.on('connection', (socket) => {
     });
 
     // Primeiro emitir que alguém acertou e esperar 3 segundos
+    console.log(`[endRoundImmediate] Emitindo correct_answer para sala ${roomCode}. currentSong:`, room.currentSong);
     io.to(roomCode).emit("correct_answer", {
       correctAnswer: room.currentSong ? `${room.currentSong.character} (${room.currentSong.movie})` : "Marvel Character",
     });
@@ -294,6 +298,7 @@ io.on('connection', (socket) => {
     // Depois de 3 segundos, avançar para o scoreboard
     setTimeout(() => {
       room.gameState = "scoreboard";
+      console.log(`[endRoundImmediate] Emitindo round_ended para sala ${roomCode}. currentSong:`, room.currentSong);
       io.to(roomCode).emit("round_ended", {
         gameState: "scoreboard",
         roundScores: room.roundScores,
@@ -342,6 +347,7 @@ io.on('connection', (socket) => {
     if (room.currentRound <= room.totalRounds) {
       room.gameState = 'game';
       room.currentSong = song;
+      console.log(`[next_round] currentSong definido para sala ${roomCode}:`, song);
       room.playerGuesses = {};
       room.correctGuesses = {};
       room.roundScores = {};

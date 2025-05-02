@@ -47,19 +47,44 @@ function fuzzyMatch(guess, target) {
   const normalizedGuess = normalizeString(guess);
   const normalizedTarget = normalizeString(target);
   
+  // Match exato
   if (normalizedGuess === normalizedTarget) return true;
   
-  // Verificar se as palavras da guess estão contidas no target
+  // Dividir em palavras
   const guessWords = normalizedGuess.split(' ');
   const targetWords = normalizedTarget.split(' ');
   
-  // Ignorar palavras muito curtas (menos de 3 letras)
-  // e verificar se cada palavra significativa da guess existe no target
-  return guessWords.every(word =>
-    word.length < 3 || targetWords.some(targetWord =>
-      targetWord.includes(word) || word.includes(targetWord)
-    )
-  );
+  // Se houver apenas uma palavra em cada, fazer comparação mais estrita
+  if (guessWords.length === 1 && targetWords.length === 1) {
+    // Verificar se uma palavra contém a outra, mas apenas se a diferença de tamanho for pequena
+    const shorter = guessWords[0].length < targetWords[0].length ? guessWords[0] : targetWords[0];
+    const longer = guessWords[0].length < targetWords[0].length ? targetWords[0] : guessWords[0];
+    
+    // Se a palavra mais curta tiver menos de 4 caracteres, exigir match exato
+    if (shorter.length < 4) return false;
+    
+    // Se a diferença de tamanho for maior que 2 caracteres, não considerar match
+    if (longer.length - shorter.length > 2) return false;
+    
+    return longer.includes(shorter);
+  }
+  
+  // Para múltiplas palavras, verificar se cada palavra significativa da guess existe no target
+  return guessWords.every(word => {
+    // Ignorar palavras muito curtas
+    if (word.length < 4) return true;
+    
+    // Verificar se a palavra existe no target
+    return targetWords.some(targetWord => {
+      // Se a palavra do target for muito curta, ignorar
+      if (targetWord.length < 4) return false;
+      
+      // Se a diferença de tamanho for maior que 2 caracteres, não considerar match
+      if (Math.abs(targetWord.length - word.length) > 2) return false;
+      
+      return targetWord.includes(word) || word.includes(targetWord);
+    });
+  });
 }
 
 io.on('connection', (socket) => {

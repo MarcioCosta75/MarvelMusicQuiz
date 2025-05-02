@@ -163,6 +163,14 @@ export default function GameScreen({
   // Use the custom audio hook
   const audioRef = useAudioPlayer(musicPreview, isPlaying, isHost, socket, roomCode, currentSong)
 
+  // Limpar áudio quando a rodada mudar
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+  }, [round]);
+
   // Initialize audio
   useEffect(() => {
     if (isHost && !audioRef.current) {

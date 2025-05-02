@@ -24,7 +24,7 @@ interface SocketContextType {
 const SocketContext = createContext<SocketContextType | undefined>(undefined)
 
 // Socket.io server URL
-const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:3001"
+const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001"
 
 export interface JoinRoomResponse {
   success: boolean;

@@ -134,6 +134,26 @@ export default function LandingPage() {
       setGameState("final_results")
     })
 
+    // Listen for music preview
+    socket.on("music_preview", ({ musicPreview }) => {
+      setInitialMusicPreview(musicPreview)
+    })
+
+    // Listen for music info
+    socket.on("music_info", ({ musicInfo }) => {
+      // Handle music info if needed
+    })
+
+    // Listen for all failed
+    socket.on("all_failed", ({ correctAnswer }) => {
+      setLastCorrectAnswer(correctAnswer)
+    })
+
+    // Listen for correct answer
+    socket.on("correct_answer", ({ correctAnswer }) => {
+      setLastCorrectAnswer(correctAnswer)
+    })
+
     return () => {
       // Clean up event listeners
       socket.off("players_updated")
@@ -148,8 +168,12 @@ export default function LandingPage() {
       socket.off("host_disconnected")
       socket.off("ready_list", handleReadyList)
       socket.off("final_results_shown")
+      socket.off("music_preview")
+      socket.off("music_info")
+      socket.off("all_failed")
+      socket.off("correct_answer")
     }
-  }, [socket])
+  }, [socket, roomCode, currentPlayer, isHost])
 
   const handleCreateRoom = useCallback(async () => {
     console.log("Creating room with rounds:", selectedRounds) // Debug log

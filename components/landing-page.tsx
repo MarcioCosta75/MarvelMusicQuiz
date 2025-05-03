@@ -18,6 +18,7 @@ import { SpeechBubble } from "./speech-bubble"
 import { ComicText } from "./comic-effects"
 import type { JoinRoomResponse } from "@/context/socket-context"
 import HostDisconnected from "./host-disconnected"
+import Link from "next/link"
 
 export default function LandingPage() {
   const { createRoom, joinRoom, addPlayer, startGame, endRound, nextRound, playAgain, socket } = useSocket()
@@ -388,7 +389,7 @@ export default function LandingPage() {
                 </Tabs>
               </CardContent>
               <CardFooter className="flex justify-center">
-                <p className="text-sm opacity-70">Assemble your team and test your Marvel music knowledge!</p>
+                <p className="text-sm opacity-70">Assemble your team and test your Marvel music knowledge! <Link href="/about" className="opacity-60 hover:opacity-100 hover:underline ml-1">About</Link></p>
               </CardFooter>
             </ComicPanel>
           )}

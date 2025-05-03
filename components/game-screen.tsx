@@ -291,24 +291,8 @@ export default function GameScreen({
       
       // Atualizar as pontuações dos jogadores que acertaram nesta rodada
       if (newScores && Object.keys(newScores).length > 0) {
-        // Calcular pontuações da rodada com base nas diferenças entre os scores antigos e novos
-        const newRoundScores: Record<string, number> = {};
-        Object.entries(newCorrectGuesses).forEach(([playerId, isCorrect]) => {
-          if (isCorrect && newScores[playerId] !== undefined) {
-            // Atribuir pontuação baseada na ordem de acertos
-            let points = 0;
-            if (playerGuesses[playerId] === undefined) {
-              // Este é um novo palpite
-              const correctCount = Object.values(newCorrectGuesses).filter(Boolean).length;
-              points = Math.max(10 - ((correctCount - 1) * 2), 1);
-            }
-            newRoundScores[playerId] = points;
-          }
-        });
-        
-        if (Object.keys(newRoundScores).length > 0) {
-          setRoundScores((prev) => ({...prev, ...newRoundScores}));
-        }
+        // Usar diretamente os scores recebidos do servidor
+        setRoundScores(newScores);
       }
     })
 

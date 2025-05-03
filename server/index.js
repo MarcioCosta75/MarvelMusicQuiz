@@ -306,10 +306,9 @@ io.on('connection', (socket) => {
     // Calcular pontuação usando a função centralizada
     const roundScores = calculateScores(room);
     
-    // Atualizar placar se acertou
-    if (isCorrect) {
-      room.scores[playerId] = (room.scores[playerId] || 0) + roundScores[playerId];
-    }
+    // Não atualizar o placar aqui, será feito no final da rodada
+    // Apenas armazenar os scores calculados para uso posterior
+    room.roundScores = roundScores;
     
     // Debug info antes de emitir
     console.log(`[DEBUG] Emitindo guess_submitted`);
@@ -402,9 +401,9 @@ io.on('connection', (socket) => {
     console.log("[DEBUG] endRoundImmediate - playerGuesses:", JSON.stringify(room.playerGuesses));
     console.log("[DEBUG] endRoundImmediate - correctGuesses:", JSON.stringify(room.correctGuesses));
     
-    // Calculate scores
-    const newScores = calculateScores(room);
-    console.log("[DEBUG] endRoundImmediate - roundScores calculados:", JSON.stringify(newScores));
+    // Usar scores já calculados ou calcular se não existirem
+    const newScores = room.roundScores || calculateScores(room);
+    console.log("[DEBUG] endRoundImmediate - roundScores finais:", JSON.stringify(newScores));
 
     // Atualizar pontuação da rodada
     room.roundScores = newScores;
@@ -440,8 +439,8 @@ io.on('connection', (socket) => {
     if (!room) return;
     if (room.host !== socket.id) return; // Só o host pode encerrar a ronda
 
-    // Calcular pontuação usando a função centralizada
-    const newScores = calculateScores(room);
+    // Usar scores já calculados ou calcular se não existirem
+    const newScores = room.roundScores || calculateScores(room);
 
     // Atualizar pontuação da rodada
     room.roundScores = newScores;
@@ -649,8 +648,8 @@ function startTimer(roomCode) {
       currentRoom.isPlaying = false;
       clearInterval(timerInterval);
 
-      // Calcular pontuação usando a função centralizada
-      const newScores = calculateScores(currentRoom);
+      // Usar scores já calculados ou calcular se não existirem
+      const newScores = currentRoom.roundScores || calculateScores(currentRoom);
       currentRoom.roundScores = newScores;
 
       io.to(roomCode).emit('timer_updated', {

@@ -48,18 +48,30 @@ export default function AboutPage() {
               <span className="inline-block transform -rotate-2 text-green-600 dark:text-green-400">Mention</span>
             </h2>
             <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border-4 border-black dark:border-white shadow-[8px_8px_0px_rgba(0,0,0,0.2)] transform rotate-2 max-w-xs w-full">
+              <a 
+                href="https://www.instagram.com/genus_wg/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-4 border-black dark:border-white shadow-[8px_8px_0px_rgba(0,0,0,0.2)] transform rotate-2 max-w-xs w-full transition-all duration-300 hover:scale-105 hover:shadow-[12px_12px_0px_rgba(0,0,0,0.2)] active:scale-95 active:shadow-[4px_4px_0px_rgba(0,0,0,0.2)] cursor-pointer"
+              >
                 <h3 className="text-center font-comic text-blue-600 dark:text-blue-400 mb-2">Nuno Bai</h3>
                 <p className="text-center text-sm font-comic-sans">
                   For the brilliant idea, endless testing, and being an awesome Marvel expert!
                 </p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border-4 border-black dark:border-white shadow-[8px_8px_0px_rgba(0,0,0,0.2)] transform -rotate-2 max-w-xs w-full">
+                <div className="mt-3 text-center text-sm font-comic opacity-70">@genus_wg</div>
+              </a>
+              <a 
+                href="https://www.instagram.com/marcilioo75/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-4 border-black dark:border-white shadow-[8px_8px_0px_rgba(0,0,0,0.2)] transform -rotate-2 max-w-xs w-full transition-all duration-300 hover:scale-105 hover:shadow-[12px_12px_0px_rgba(0,0,0,0.2)] active:scale-95 active:shadow-[4px_4px_0px_rgba(0,0,0,0.2)] cursor-pointer"
+              >
                 <h3 className="text-center font-comic text-red-600 dark:text-red-400 mb-2">Márcio Costa</h3>
                 <p className="text-center text-sm font-comic-sans">
                   Developer, designer, and the brain behind the implementation of this marvelous quiz!
                 </p>
-              </div>
+                <div className="mt-3 text-center text-sm font-comic opacity-70">@marcilioo75</div>
+              </a>
             </div>
           </div>
 

@@ -284,9 +284,32 @@ export default function GameScreen({
     })
 
     // Listen for guess submissions
-    socket.on("guess_submitted", ({ playerGuesses: newPlayerGuesses, correctGuesses: newCorrectGuesses }) => {
+    socket.on("guess_submitted", ({ playerGuesses: newPlayerGuesses, correctGuesses: newCorrectGuesses, scores: newScores }) => {
+      console.log("[socket] guess_submitted recebido:", { newPlayerGuesses, newCorrectGuesses, newScores })
       setPlayerGuesses(newPlayerGuesses)
       setCorrectGuesses(newCorrectGuesses)
+      
+      // Atualizar as pontuações dos jogadores que acertaram nesta rodada
+      if (newScores && Object.keys(newScores).length > 0) {
+        // Calcular pontuações da rodada com base nas diferenças entre os scores antigos e novos
+        const newRoundScores: Record<string, number> = {};
+        Object.entries(newCorrectGuesses).forEach(([playerId, isCorrect]) => {
+          if (isCorrect && newScores[playerId] !== undefined) {
+            // Atribuir pontuação baseada na ordem de acertos
+            let points = 0;
+            if (playerGuesses[playerId] === undefined) {
+              // Este é um novo palpite
+              const correctCount = Object.values(newCorrectGuesses).filter(Boolean).length;
+              points = Math.max(10 - ((correctCount - 1) * 2), 1);
+            }
+            newRoundScores[playerId] = points;
+          }
+        });
+        
+        if (Object.keys(newRoundScores).length > 0) {
+          setRoundScores((prev) => ({...prev, ...newRoundScores}));
+        }
+      }
     })
 
     // Listen for timer updates
@@ -313,6 +336,11 @@ export default function GameScreen({
       }, 3000)
     })
 
+    // Listen for correct_answer event
+    socket.on("correct_answer", ({ correctAnswer }) => {
+      setLastCorrectAnswer(correctAnswer)
+    })
+
     return () => {
       // Clean up event listeners
       socket.off("music_toggled")
@@ -320,8 +348,9 @@ export default function GameScreen({
       socket.off("guess_submitted")
       socket.off("timer_updated")
       socket.off("all_failed")
+      socket.off("correct_answer")
     }
-  }, [socket, isHost, onEndRound])
+  }, [socket, isHost, onEndRound, playerGuesses]);
 
   // Receber info da música de todos
   useEffect(() => {

@@ -30,11 +30,12 @@ const playAgainReady = new Map();
 
 // Função para normalizar strings para comparação
 function normalizeString(str) {
+  if (!str) return '';
   return str
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[-_]/g, ' ')
+    .replace(/[-_()]/g, ' ')  // Substituir hífen, underline e parênteses por espaço
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -45,53 +46,87 @@ function fuzzyMatch(guess, target) {
   if (!guess || !target) return false;
   
   // Normalizar strings
-  const normalizeString = (str) => {
-    return str.toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-      .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
-      .trim();
-  };
-  
   const normalizedGuess = normalizeString(guess);
   const normalizedTarget = normalizeString(target);
   
-  // Se for exatamente igual após normalização, retorna true
-  if (normalizedGuess === normalizedTarget) return true;
+  // Logging para debug
+  console.log(`[DEBUG] Normalizado - Palpite: "${normalizedGuess}" | Alvo: "${normalizedTarget}"`);
   
-  // Se for uma palavra única
-  if (!normalizedGuess.includes(' ')) {
-    // Se a palavra for curta (menos de 4 caracteres), requer match exato
-    if (normalizedGuess.length < 4) {
-      return normalizedGuess === normalizedTarget;
-    }
-    
-    // Para palavras mais longas, permite diferença de 1 caractere
-    const maxDiff = Math.min(1, Math.floor(normalizedGuess.length * 0.1));
-    return Math.abs(normalizedGuess.length - normalizedTarget.length) <= maxDiff &&
-           (normalizedTarget.includes(normalizedGuess) || normalizedGuess.includes(normalizedTarget));
+  // Se for exatamente igual após normalização, retorna true imediatamente
+  if (normalizedGuess === normalizedTarget) {
+    console.log(`[DEBUG] Match exato após normalização`);
+    return true;
   }
   
-  // Para múltiplas palavras
+  // Se o palpite normalizado estiver contido no alvo normalizado, retorna true
+  if (normalizedTarget.includes(normalizedGuess)) {
+    console.log(`[DEBUG] Palpite contido no alvo`);
+    return true;
+  }
+  
+  // Se o alvo normalizado estiver contido no palpite normalizado, retorna true
+  if (normalizedGuess.includes(normalizedTarget)) {
+    console.log(`[DEBUG] Alvo contido no palpite`);
+    return true;
+  }
+  
+  // Para múltiplas palavras, verificar se todas as palavras significativas do palpite estão no alvo
   const guessWords = normalizedGuess.split(' ').filter(w => w.length >= 3);
   const targetWords = normalizedTarget.split(' ').filter(w => w.length >= 3);
   
-  // Se não houver palavras significativas, retorna false
-  if (guessWords.length === 0 || targetWords.length === 0) return false;
+  // Se não houver palavras significativas no palpite ou no alvo, retorna false
+  if (guessWords.length === 0 || targetWords.length === 0) {
+    console.log(`[DEBUG] Não há palavras significativas para comparar`);
+    return false;
+  }
   
-  // Verifica se todas as palavras significativas do palpite existem no alvo
-  return guessWords.every(guessWord => {
-    return targetWords.some(targetWord => {
-      // Para palavras curtas, requer match exato
-      if (guessWord.length < 4) {
-        return guessWord === targetWord;
+  // Para ser considerado um match, pelo menos 50% das palavras significativas do palpite 
+  // devem estar presentes no alvo, ou vice-versa
+  const matchingWords = guessWords.filter(guessWord => 
+    targetWords.some(targetWord => 
+      targetWord.includes(guessWord) || guessWord.includes(targetWord)
+    )
+  );
+  
+  const matchPercentage = matchingWords.length / Math.min(guessWords.length, targetWords.length);
+  const isMatch = matchPercentage >= 0.5;
+  
+  console.log(`[DEBUG] Palavras correspondentes: ${matchingWords.length}/${Math.min(guessWords.length, targetWords.length)} (${matchPercentage * 100}%)`);
+  console.log(`[DEBUG] Resultado final: ${isMatch}`);
+  
+  return isMatch;
+}
+
+// Função auxiliar para calcular pontuação
+function calculateScores(room) {
+  const newScores = {};
+  let rank = 1;
+
+  // Sort players by who answered correctly first
+  const correctPlayers = room.players
+    .filter((p) => room.correctGuesses[p.id])
+    .sort((a, b) => {
+      // Usar o timestamp registrado com o palpite para ordenação
+      const aData = room.playerGuesses[a.id];
+      const bData = room.playerGuesses[b.id];
+      
+      // Se temos timestamps, usar eles para ordenação
+      if (aData && bData && aData.timestamp && bData.timestamp) {
+        return aData.timestamp - bData.timestamp;
       }
-      // Para palavras mais longas, permite diferença de 1 caractere
-      const maxDiff = Math.min(1, Math.floor(guessWord.length * 0.1));
-      return Math.abs(guessWord.length - targetWord.length) <= maxDiff &&
-             (targetWord.includes(guessWord) || guessWord.includes(targetWord));
+      
+      // Fallback para o caso de não termos timestamps
+      return Object.keys(room.playerGuesses).indexOf(a.id) - Object.keys(room.playerGuesses).indexOf(b.id);
     });
+
+  // Assign points based on rank (10, 8, 6, 4, 2, 1)
+  correctPlayers.forEach((player) => {
+    const points = Math.max(10 - (rank - 1) * 2, 1);
+    newScores[player.id] = points;
+    rank++;
   });
+
+  return newScores;
 }
 
 io.on('connection', (socket) => {
@@ -241,38 +276,55 @@ io.on('connection', (socket) => {
     // Só pode submeter uma vez por ronda e se o jogo estiver em andamento
     if (room.playerGuesses[playerId] || !room.isPlaying) return;
     
-    room.playerGuesses[playerId] = guess;
+    // Verificar se temos informações da música atual
+    if (!room.currentSong) {
+      console.log(`[ERROR] Sala ${roomCode} não tem música atual definida`);
+      return;
+    }
+    
+    // Adicionar timestamp ao palpite
+    room.playerGuesses[playerId] = {
+      guess,
+      timestamp: Date.now()
+    };
     
     // Validação: acerta se personagem OU filme
-    const characterMatch = fuzzyMatch(guess, room.currentSong?.character || '');
-    const movieMatch = fuzzyMatch(guess, room.currentSong?.movie || '');
+    const characterMatch = fuzzyMatch(guess, room.currentSong.character || '');
+    const movieMatch = fuzzyMatch(guess, room.currentSong.movie || '');
     const isCorrect = characterMatch || movieMatch;
     
     console.log(`[DEBUG] Palpite: "${guess}"`);
-    console.log(`[DEBUG] Personagem correto: "${room.currentSong?.character}"`);
-    console.log(`[DEBUG] Filme correto: "${room.currentSong?.movie}"`);
-    console.log(`[DEBUG] Música: "${room.currentSong?.title}"`);
-    console.log(`[DEBUG] Artista: "${room.currentSong?.artist}"`);
+    console.log(`[DEBUG] Personagem correto: "${room.currentSong.character}"`);
+    console.log(`[DEBUG] Filme correto: "${room.currentSong.movie}"`);
+    console.log(`[DEBUG] Música: "${room.currentSong.title}"`);
+    console.log(`[DEBUG] Artista: "${room.currentSong.artist}"`);
     console.log(`[DEBUG] Match personagem: ${characterMatch}`);
     console.log(`[DEBUG] Match filme: ${movieMatch}`);
     
     room.correctGuesses[playerId] = isCorrect;
     
+    // Calcular pontuação usando a função centralizada
+    const roundScores = calculateScores(room);
+    
     // Atualizar placar se acertou
     if (isCorrect) {
-      // Calcular pontos baseado na ordem de resposta
-      const correctPlayers = Object.entries(room.correctGuesses)
-        .filter(([_, isCorrect]) => isCorrect)
-        .map(([id]) => id);
-      
-      const playerRank = correctPlayers.indexOf(playerId) + 1;
-      const points = Math.max(10 - (playerRank - 1) * 2, 1);
-      
-      room.scores[playerId] = (room.scores[playerId] || 0) + points;
+      room.scores[playerId] = (room.scores[playerId] || 0) + roundScores[playerId];
     }
     
+    // Debug info antes de emitir
+    console.log(`[DEBUG] Emitindo guess_submitted`);
+    console.log(`[DEBUG] playerGuesses estrutura:`, JSON.stringify(room.playerGuesses));
+    console.log(`[DEBUG] playerGuesses convertido:`, JSON.stringify(
+      Object.fromEntries(Object.entries(room.playerGuesses).map(([id, data]) => [id, data.guess]))
+    ));
+    console.log(`[DEBUG] correctGuesses:`, JSON.stringify(room.correctGuesses));
+    console.log(`[DEBUG] scores:`, JSON.stringify(room.scores));
+    
+    // Emitir para todos na sala
     io.to(roomCode).emit('guess_submitted', {
-      playerGuesses: room.playerGuesses,
+      playerGuesses: Object.fromEntries(
+        Object.entries(room.playerGuesses).map(([id, data]) => [id, data.guess])
+      ),
       correctGuesses: room.correctGuesses,
       scores: room.scores,
     });
@@ -282,7 +334,15 @@ io.on('connection', (socket) => {
     const totalGuesses = Object.keys(room.playerGuesses).length;
     const totalCorrect = Object.values(room.correctGuesses).filter(Boolean).length;
     
-    if (totalGuesses === totalPlayers && totalCorrect === 0) {
+    console.log(`[DEBUG] totalPlayers: ${totalPlayers}, totalGuesses: ${totalGuesses}, totalCorrect: ${totalCorrect}`);
+    console.log(`[DEBUG] players:`, room.players.map(p => p.id));
+    console.log(`[DEBUG] playerGuesses keys:`, Object.keys(room.playerGuesses));
+    
+    // Verificar se cada jogador tem um palpite
+    const allPlayersGuessed = room.players.every(player => room.playerGuesses[player.id] !== undefined);
+    
+    if (allPlayersGuessed && totalCorrect === 0) {
+      console.log(`[DEBUG] Todos jogadores responderam e ninguém acertou. Encerrando ronda.`);
       // Ninguém acertou, terminar ronda e mostrar resposta correta
       room.isPlaying = false;
       if (roomTimers.has(roomCode)) {
@@ -299,7 +359,8 @@ io.on('connection', (socket) => {
     }
     
     // Se todos submeteram e pelo menos um acertou, terminar ronda imediatamente
-    if (totalGuesses === totalPlayers && totalCorrect > 0) {
+    if (allPlayersGuessed && totalCorrect > 0) {
+      console.log(`[DEBUG] Todos jogadores responderam e pelo menos um acertou. Encerrando ronda.`);
       room.isPlaying = false;
       if (roomTimers.has(roomCode)) {
         clearInterval(roomTimers.get(roomCode));
@@ -337,29 +398,13 @@ io.on('connection', (socket) => {
     if (!rooms[roomCode]) return;
     const room = rooms[roomCode];
     
+    // Antes de calcular scores, garantir que estamos usando os dados corretos
+    console.log("[DEBUG] endRoundImmediate - playerGuesses:", JSON.stringify(room.playerGuesses));
+    console.log("[DEBUG] endRoundImmediate - correctGuesses:", JSON.stringify(room.correctGuesses));
+    
     // Calculate scores
-    const newScores = {};
-    let rank = 1;
-
-    // Sort players by who answered correctly first
-    const correctPlayers = room.players
-      .filter((p) => room.correctGuesses[p.id])
-      .sort((a, b) => {
-        const aTime = room.playerGuesses[a.id]
-          ? room.players.findIndex((p) => p.id === a.id)
-          : Number.POSITIVE_INFINITY;
-        const bTime = room.playerGuesses[b.id]
-          ? room.players.findIndex((p) => p.id === b.id)
-          : Number.POSITIVE_INFINITY;
-        return aTime - bTime;
-      });
-
-    // Assign points based on rank (10, 8, 6, 4, 2, 1)
-    correctPlayers.forEach((player) => {
-      const points = Math.max(10 - (rank - 1) * 2, 1);
-      newScores[player.id] = points;
-      rank++;
-    });
+    const newScores = calculateScores(room);
+    console.log("[DEBUG] endRoundImmediate - roundScores calculados:", JSON.stringify(newScores));
 
     // Atualizar pontuação da rodada
     room.roundScores = newScores;
@@ -395,29 +440,8 @@ io.on('connection', (socket) => {
     if (!room) return;
     if (room.host !== socket.id) return; // Só o host pode encerrar a ronda
 
-    // Calculate scores
-    const newScores = {};
-    let rank = 1;
-
-    // Sort players by who answered correctly first
-    const correctPlayers = room.players
-      .filter((p) => room.correctGuesses[p.id])
-      .sort((a, b) => {
-        const aTime = room.playerGuesses[a.id]
-          ? room.players.findIndex((p) => p.id === a.id)
-          : Number.POSITIVE_INFINITY;
-        const bTime = room.playerGuesses[b.id]
-          ? room.players.findIndex((p) => p.id === b.id)
-          : Number.POSITIVE_INFINITY;
-        return aTime - bTime;
-      });
-
-    // Assign points based on rank (10, 8, 6, 4, 2, 1)
-    correctPlayers.forEach((player) => {
-      const points = Math.max(10 - (rank - 1) * 2, 1);
-      newScores[player.id] = points;
-      rank++;
-    });
+    // Calcular pontuação usando a função centralizada
+    const newScores = calculateScores(room);
 
     // Atualizar pontuação da rodada
     room.roundScores = newScores;
@@ -625,29 +649,8 @@ function startTimer(roomCode) {
       currentRoom.isPlaying = false;
       clearInterval(timerInterval);
 
-      // Calculate scores automatically when time runs out
-      const newScores = {};
-      let rank = 1;
-
-      // Sort players by who answered correctly first
-      const correctPlayers = currentRoom.players
-        .filter((p) => currentRoom.correctGuesses[p.id])
-        .sort((a, b) => {
-          const aTime = currentRoom.playerGuesses[a.id]
-            ? currentRoom.players.findIndex((p) => p.id === a.id)
-            : Number.POSITIVE_INFINITY;
-          const bTime = currentRoom.playerGuesses[b.id]
-            ? currentRoom.players.findIndex((p) => p.id === b.id)
-            : Number.POSITIVE_INFINITY;
-          return aTime - bTime;
-        });
-
-      // Assign points based on rank
-      correctPlayers.forEach((player) => {
-        newScores[player.id] = Math.max(10 - (rank - 1) * 2, 1);
-        rank++;
-      });
-
+      // Calcular pontuação usando a função centralizada
+      const newScores = calculateScores(currentRoom);
       currentRoom.roundScores = newScores;
 
       io.to(roomCode).emit('timer_updated', {

@@ -65,9 +65,12 @@ export default function LandingPage() {
     // Listen for all_ready (apenas host faz fetch da música)
     socket.on("all_ready", ({ roomCode: readyRoomCode }) => {
       if (isHost && readyRoomCode === roomCode) {
+        console.log("[socket] all_ready recebido, escolhendo música");
         const randomIndex = Math.floor(Math.random() * marvelSongs.length)
         const song = marvelSongs[randomIndex]
         setCurrentSong(song)
+        // Emitir para todos a música selecionada
+        socket.emit("current_song", { roomCode, currentSong: song });
         // O GameScreen do host fará fetch e emitirá para todos
       }
     })
@@ -82,7 +85,11 @@ export default function LandingPage() {
     // Listen for current_song event
     socket.on("current_song", ({ currentSong }) => {
       console.log("[socket] current_song recebido:", currentSong?.title)
-      setCurrentSong(currentSong)
+      if (currentSong) {
+        setCurrentSong(currentSong)
+      } else {
+        console.error("[socket] current_song recebido sem música definida");
+      }
     })
 
     socket.on("round_ended", ({ gameState, roundScores, scores, correctAnswer }) => {

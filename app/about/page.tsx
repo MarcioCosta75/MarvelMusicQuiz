@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { ComicPanel } from "@/components/comic-effects"
 import { SpeechBubble } from "@/components/speech-bubble"
 import { ComicText } from "@/components/comic-effects"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Instagram } from "lucide-react"
 
 export default function AboutPage() {
   return (
@@ -20,8 +20,11 @@ export default function AboutPage() {
         <ThemeToggle />
       </div>
 
-      <ComicPanel className="relative overflow-hidden mb-8">
-        <div className="p-6">
+      <ComicPanel className="relative overflow-hidden mb-8 border-4 border-black dark:border-gray-700 shadow-[8px_8px_0px_rgba(0,0,0,0.3)]">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400 transform rotate-45 translate-x-16 -translate-y-16 z-0 opacity-30"></div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-400 transform rotate-45 -translate-x-16 translate-y-16 z-0 opacity-30"></div>
+        
+        <div className="p-6 relative z-10">
           <ComicText type="boom" size="lg" className="mb-6">Origin Story</ComicText>
           
           <div className="mb-8 font-comic-sans text-lg leading-relaxed">
@@ -42,44 +45,53 @@ export default function AboutPage() {
             </SpeechBubble>
           </div>
 
-          <div className="bg-yellow-100 dark:bg-yellow-900/40 p-6 rounded-lg border-2 border-dashed border-yellow-500 mb-8">
-            <h2 className="text-2xl font-comic mb-4 transform -rotate-1 text-center">
-              <span className="inline-block transform rotate-2 text-purple-600 dark:text-purple-400">Honorable</span>{" "}
-              <span className="inline-block transform -rotate-2 text-green-600 dark:text-green-400">Mention</span>
+          <div className="bg-yellow-100 dark:bg-yellow-900/40 p-6 rounded-lg border-2 border-dashed border-yellow-500 mb-8 relative overflow-hidden">
+            <h2 className="text-2xl font-comic mb-6 transform -rotate-1 text-center">
+              <span className="inline-block transform rotate-2 text-purple-600 dark:text-purple-400 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.2)]">Honorable</span>{" "}
+              <span className="inline-block transform -rotate-2 text-green-600 dark:text-green-400 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.2)]">Mention</span>
             </h2>
             <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-              <a 
-                href="https://www.instagram.com/genus_wg/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-4 border-black dark:border-white shadow-[8px_8px_0px_rgba(0,0,0,0.2)] transform rotate-2 max-w-xs w-full transition-all duration-300 hover:scale-105 hover:shadow-[12px_12px_0px_rgba(0,0,0,0.2)] active:scale-95 active:shadow-[4px_4px_0px_rgba(0,0,0,0.2)] cursor-pointer"
-              >
-                <h3 className="text-center font-comic text-blue-600 dark:text-blue-400 mb-2">Nuno Bai</h3>
-                <p className="text-center text-sm font-comic-sans">
-                  For the brilliant idea, endless testing, and being an awesome Marvel expert!
-                </p>
-                <div className="mt-3 text-center text-sm font-comic opacity-70">@genus_wg</div>
-              </a>
               <a 
                 href="https://www.instagram.com/marcilioo75/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-4 border-black dark:border-white shadow-[8px_8px_0px_rgba(0,0,0,0.2)] transform -rotate-2 max-w-xs w-full transition-all duration-300 hover:scale-105 hover:shadow-[12px_12px_0px_rgba(0,0,0,0.2)] active:scale-95 active:shadow-[4px_4px_0px_rgba(0,0,0,0.2)] cursor-pointer"
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-4 border-black dark:border-white shadow-[8px_8px_0px_rgba(0,0,0,0.2)] transform rotate-2 max-w-xs w-full transition-all duration-300 hover:scale-105 hover:shadow-[12px_12px_0px_rgba(0,0,0,0.2)] active:scale-95 active:shadow-[4px_4px_0px_rgba(0,0,0,0.2)] cursor-pointer"
               >
                 <h3 className="text-center font-comic text-red-600 dark:text-red-400 mb-2">Márcio Costa</h3>
                 <p className="text-center text-sm font-comic-sans">
                   Developer, designer, and the brain behind the implementation of this marvelous quiz!
                 </p>
-                <div className="mt-3 text-center text-sm font-comic opacity-70">@marcilioo75</div>
+                <div className="mt-3 text-center text-sm font-comic opacity-70 flex items-center justify-center gap-1">
+                  <Instagram size={16} /> @marcilioo75
+                </div>
+              </a>
+              <a 
+                href="https://www.instagram.com/genus_wg/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-4 border-black dark:border-white shadow-[8px_8px_0px_rgba(0,0,0,0.2)] transform -rotate-2 max-w-xs w-full transition-all duration-300 hover:scale-105 hover:shadow-[12px_12px_0px_rgba(0,0,0,0.2)] active:scale-95 active:shadow-[4px_4px_0px_rgba(0,0,0,0.2)] cursor-pointer"
+              >
+                <h3 className="text-center font-comic text-blue-600 dark:text-blue-400 mb-2">Nuno Bai</h3>
+                <p className="text-center text-sm font-comic-sans">
+                  For helping coming up with the idea, endless testing, and being an awesome Marvel expert!
+                </p>
+                <div className="mt-3 text-center text-sm font-comic opacity-70 flex items-center justify-center gap-1">
+                  <Instagram size={16} /> @genus_wg
+                </div>
               </a>
             </div>
           </div>
 
-          <div className="text-center">
-            <ComicText type="pow" size="md" className="mb-4">Assemble Your Team!</ComicText>
-            <p className="font-comic-sans mb-6">
-              Gather your friends, test your Marvel music knowledge, and have a blast!
-            </p>
+          <div className="text-center relative">
+            <div className="absolute inset-0 flex items-center justify-center z-0">
+              <div className="w-64 h-64 bg-yellow-400 opacity-10 rounded-full blur-3xl"></div>
+            </div>
+            <div className="relative z-10">
+              <ComicText type="pow" size="md" className="mb-4">Assemble Your Team!</ComicText>
+              <p className="font-comic-sans mb-6">
+                Gather your friends, test your Marvel music knowledge, and have a blast!
+              </p>
+            </div>
           </div>
         </div>
       </ComicPanel>

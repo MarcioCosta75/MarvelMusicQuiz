@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuração do sitemap
-const siteUrl = 'https://marvel-music-quiz.vercel.app'; // Substitua pelo seu domínio real
+const siteUrl = 'https://marvelmusicquizfrontend.onrender.com'; // Domínio correto no Render
 const pages = [
   '/',
   '/about',
